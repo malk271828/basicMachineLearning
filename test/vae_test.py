@@ -1,8 +1,41 @@
 import os
 import sys
+import warnings
 sys.path.insert(0, os.getcwd())
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
+
+# Machine Learning Libraries
+from sklearn.datasets import *
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import MinMaxScaler
+from keras.optimizers import Adam
 
 from vae import *
+
+def test_1d_binary():
+    """binary classification test
+    Reference:
+        https://www.programcreek.com/python/example/104690/sklearn.datasets.load_breast_cancer
+    """
+    X, y = load_breast_cancer(return_X_y=True)
+    assert len(X) == len(y)
+    input_shape = X[0].shape
+    print("\n--------------------------------------")
+    print("%d samples" % len(X))
+    print("input_shape:", input_shape)
+    print("--------------------------------------")
+    scaler = MinMaxScaler()
+    scaler.fit(X)
+    enable_graph = False
+
+    vae, encoder, decoder = build_vae(input_shape, enable_mse=False,
+                                        enable_graph=enable_graph)
+    vae.compile(optimizer=Adam(0.0002, 0.5))
+    vae.fit(scaler.transform(X), batch_size=128, epochs=100)
+    reconstruct_X = vae.predict(X)
+
+    #print(classification_report(y, predicted_y))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
