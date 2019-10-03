@@ -32,24 +32,16 @@ def test_1d_binary():
     vae, encoder, decoder = build_vae(input_shape, enable_mse=False,
                                         enable_graph=enable_graph)
     vae.compile(optimizer=Adam(0.0002, 0.5))
-    vae.fit(scaler.transform(X), batch_size=128, epochs=100)
+    vae.fit(scaler.transform(X), batch_size=128, epochs=300)
     reconstruct_X = vae.predict(X)
 
     #print(classification_report(y, predicted_y))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    help_ = "Load h5 model trained weights"
-    parser.add_argument("-w", "--weights", help=help_)
-    help_ = "Use mse loss instead of binary cross entropy (default)"
-    parser.add_argument("-m",
-                        "--mse",
-                        help=help_, action='store_true')
-    args = parser.parse_args()
+def test_vae():
+    enable_mse = False
 
     # MNIST dataset
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    data = (x_test, y_test)
 
     image_size = x_train.shape[1]
     original_dim = image_size * image_size
@@ -57,6 +49,7 @@ if __name__ == '__main__':
     x_test = np.reshape(x_test, [-1, original_dim])
     x_train = x_train.astype('float32') / 255
     x_test = x_test.astype('float32') / 255
+    data = (x_test, y_test)
 
     # network parameters
     input_shape = (original_dim, )
@@ -64,7 +57,7 @@ if __name__ == '__main__':
     epochs = 50
     enable_graph = False
 
-    vae, encoder, decoder = build_vae(input_shape, enable_mse=args.mse,
+    vae, encoder, decoder = build_vae(input_shape, enable_mse=enable_mse,
                                         enable_graph=enable_graph)
     models = (encoder, decoder)
 
@@ -73,15 +66,12 @@ if __name__ == '__main__':
     if enable_graph:
         plot_model(vae, to_file='vae_mlp.png', show_shapes=True)
 
-    if args.weights:
-        vae.load_weights(args.weights)
-    else:
-        # train the autoencoder
-        vae.fit(x_train,
-                epochs=epochs,
-                batch_size=batch_size,
-                validation_data=(x_test, None))
-        vae.save_weights('vae_mlp_mnist.h5')
+    # train the autoencoder
+    vae.fit(x_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(x_test, None))
+    vae.save_weights('vae_mlp_mnist.h5')
 
     plot_results(models,
                  data,
