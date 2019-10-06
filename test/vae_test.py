@@ -37,7 +37,7 @@ def test_1d_binary():
 
     #print(classification_report(y, predicted_y))
 
-def test_vae():
+def test_mnist():
     enable_mse = False
 
     # MNIST dataset
@@ -57,17 +57,17 @@ def test_vae():
     epochs = 50
     enable_graph = False
 
-    vae, encoder, decoder = build_vae(input_shape, enable_mse=enable_mse,
+    vae, encoder, decoder, vae_loss = build_vae(input_shape, enable_mse=enable_mse,
                                         enable_graph=enable_graph)
     models = (encoder, decoder)
 
-    vae.compile(optimizer='adam')
+    vae.compile(optimizer='adam', loss=vae_loss)
     vae.summary()
     if enable_graph:
         plot_model(vae, to_file='vae_mlp.png', show_shapes=True)
 
     # train the autoencoder
-    vae.fit(x_train,
+    vae.fit(x_train, x_train,
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(x_test, None))
