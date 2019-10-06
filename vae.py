@@ -99,6 +99,31 @@ def plot_results(models,
     plt.savefig(filename)
     plt.show()
 
+# Define custom loss
+def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
+    """
+    Reference
+    ---------
+        http://louistiao.me/posts/implementing-variational-autoencoders-in-keras-beyond-the-quickstart-tutorial/
+        https://towardsdatascience.com/advanced-keras-constructing-complex-custom-losses-and-metrics-c07ca130a618
+    """
+    def loss(y_true, y_pred):
+        # VAE loss = mse_loss or xent_loss + kl_loss
+        if enable_mse:
+            reconstruction_loss = mse(y_true, y_pred)
+        else:
+            reconstruction_loss = binary_crossentropy(y_true,
+                                                    y_pred)
+
+        reconstruction_loss *= original_dim
+        kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+        kl_loss = K.sum(kl_loss, axis=-1)
+        kl_loss *= -0.5
+        vae_loss = K.mean(reconstruction_loss + kl_loss)
+
+    # Return a function
+    return loss
+
 def build_vae(input_shape, enable_mse, enable_graph):
     intermediate_dim = 512
     latent_dim = 2
