@@ -33,8 +33,8 @@ def test_breast_cancer():
     transformed_X = scaler.transform(X)
     enable_graph = False
 
-    vae, encoder, decoder, vae_loss = build_vae(input_shape, enable_mse=enable_mse,
-                                        enable_graph=enable_graph)
+    vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=64,
+                                        enable_mse=enable_mse, enable_graph=enable_graph)
     vae.compile(optimizer=Adam(0.0002, 0.5), loss=vae_loss)
     vae.fit(transformed_X, transformed_X, batch_size=128, epochs=300)
 
@@ -63,11 +63,12 @@ def test_mnist():
     # network parameters
     input_shape = (original_dim, )
     batch_size = 128
-    epochs = 50
+    epochs = 3
     enable_graph = False
+    latent_dim = 2
 
-    vae, encoder, decoder, vae_loss = build_vae(input_shape, enable_mse=enable_mse,
-                                        enable_graph=enable_graph)
+    vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=latent_dim,
+                                        enable_mse=enable_mse, enable_graph=enable_graph)
     models = (encoder, decoder)
 
     vae.compile(optimizer='adam', loss=vae_loss)

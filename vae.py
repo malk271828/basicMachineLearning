@@ -124,9 +124,11 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
     # Return a function
     return loss
 
-def build_vae(input_shape, enable_mse, enable_graph):
+def build_vae(input_shape: tuple,
+              latent_dim: int,
+              enable_mse: bool,
+              enable_graph: bool = False):
     intermediate_dim = 512
-    latent_dim = 2
     original_dim = np.prod(input_shape)
 
     # VAE model = encoder + decoder
