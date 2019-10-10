@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from keras.layers import Lambda, Input, Dense
+from keras.layers import Lambda, Input, Dense, Conv2D, Conv2DTranspose, Flatten, Reshape
 from keras.models import Model
 from keras.datasets import mnist
 from keras.losses import mse, binary_crossentropy
@@ -127,37 +127,76 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
 def build_vae(input_shape: tuple,
               latent_dim: int,
               enable_mse: bool,
-              enable_graph: bool = False):
+              enable_graph: bool = False,
+              verbose: int = 0):
     intermediate_dim = 512
     original_dim = np.prod(input_shape)
+    
+    if verbose > 0:
+        print("input_shape:", input_shape)
 
-    # VAE model = encoder + decoder
-    # build encoder model
-    inputs = Input(shape=input_shape, name='encoder_input')
-    x = Dense(intermediate_dim, activation='relu')(inputs)
-    z_mean = Dense(latent_dim, name='z_mean')(x)
-    z_log_var = Dense(latent_dim, name='z_log_var')(x)
+    if len(input_shape)==1:
+        # VAE model = encoder + decoder
+        # build encoder model
+        inputs = Input(shape=input_shape, name='encoder_input')
+        x = Dense(intermediate_dim, activation='relu')(inputs)
+        z_mean = Dense(latent_dim, name='z_mean')(x)
+        z_log_var = Dense(latent_dim, name='z_log_var')(x)
 
-    # use reparameterization trick to push the sampling out as input
-    # note that "output_shape" isn't necessary with the TensorFlow backend
-    z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
+        # use reparameterization trick to push the sampling out as input
+        # note that "output_shape" isn't necessary with the TensorFlow backend
+        z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
 
-    # instantiate encoder model
-    encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
-    encoder.summary()
-    if enable_graph:
-        plot_model(encoder, to_file='vae_mlp_encoder.png', show_shapes=True)
+        # instantiate encoder model
+        encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
+        encoder.summary()
+        if enable_graph:
+            plot_model(encoder, to_file='vae_mlp_encoder.png', show_shapes=True)
 
-    # build decoder model
-    latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
-    x = Dense(intermediate_dim, activation='relu')(latent_inputs)
-    outputs = Dense(original_dim, activation='sigmoid')(x)
+        # build decoder model
+        latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
+        x = Dense(intermediate_dim, activation='relu')(latent_inputs)
+        outputs = Dense(original_dim, activation='sigmoid')(x)
 
-    # instantiate decoder model
-    decoder = Model(latent_inputs, outputs, name='decoder')
-    decoder.summary()
-    if enable_graph:
-        plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
+        # instantiate decoder model
+        decoder = Model(latent_inputs, outputs, name='decoder')
+        decoder.summary()
+        if enable_graph:
+            plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
+    else:
+        filters = 2
+        kernel_size = 3
+        inputs = Input(shape=input_shape, name='encoder_input')
+        x = Conv2D(filters=4, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(inputs)
+        x = Conv2D(filters=8    , kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
+        shape = K.int_shape(x)[1:]
+        x = Flatten()(x)
+        x = Dense(intermediate_dim, activation='relu')(x)
+        z_mean = Dense(latent_dim, name='z_mean')(x)
+        z_log_var = Dense(latent_dim, name='z_log_var')(x)
+
+        # use reparameterization trick to push the sampling out as input
+        # note that "output_shape" isn't necessary with the TensorFlow backend
+        z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
+
+        # instantiate encoder model
+        encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
+        encoder.summary()
+        if enable_graph:
+            plot_model(encoder, to_file='vae_mlp_encoder.png', show_shapes=True)
+
+        # build decoder model
+        latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
+        x = Dense(np.prod(shape), activation='relu')(latent_inputs)
+        x = Reshape(shape)(x)
+        x = Conv2DTranspose(filters=4, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
+        outputs = Conv2DTranspose(filters=8, kernel_size=kernel_size, activation="sigmoid", strides=2, padding="same")(x)
+
+        # instantiate decoder model
+        decoder = Model(latent_inputs, outputs, name='decoder')
+        decoder.summary()
+        if enable_graph:
+            plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
 
     # instantiate VAE model
     outputs = decoder(encoder(inputs)[2])

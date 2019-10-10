@@ -11,6 +11,7 @@ from sklearn.metrics import classification_report
 from sklearn.preprocessing import MinMaxScaler
 from keras.optimizers import Adam
 from tensorflow.keras.backend import get_value
+from keras.utils import to_categorical
 
 from vae import *
 
@@ -46,7 +47,7 @@ def test_breast_cancer():
     loss_instance = vae_loss(y_pred=reconstruct_X, y_true=transformed_X)
     print(get_value(loss_instance))
 
-def test_mnist():
+def test_mnist_1d():
     enable_mse = False
 
     # MNIST dataset
@@ -69,6 +70,52 @@ def test_mnist():
 
     vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=latent_dim,
                                         enable_mse=enable_mse, enable_graph=enable_graph)
+    models = (encoder, decoder)
+
+    vae.compile(optimizer='adam', loss=vae_loss)
+    vae.summary()
+    if enable_graph:
+        plot_model(vae, to_file='vae_mlp.png', show_shapes=True)
+
+    # train the variational autoencoder
+    # feed the same tensor for X and y:
+    # https://github.com/tensorflow/tensorflow/issues/21894
+    vae.fit(x_train, x_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(x_test, x_test))
+    vae.save_weights('vae_mlp_mnist.h5')
+
+    plot_results(models,
+                 data,
+                 batch_size=batch_size,
+                 model_name="vae_mlp")
+
+def test_mnist_2d():
+    enable_mse = False
+
+    # MNIST dataset
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+    image_size = x_train.shape[1]
+    original_dim = image_size * image_size
+    x_train = np.expand_dims(x_train, axis=3)
+    x_test = np.expand_dims(x_test, axis=3)
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
+    x_train = x_train.astype('float32') / 255
+    x_test = x_test.astype('float32') / 255
+    data = (x_test, y_test)
+
+    # network parameters
+    input_shape = x_train[0].shape
+    batch_size = 128
+    epochs = 3
+    enable_graph = False
+    latent_dim = 2
+
+    vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=latent_dim,
+                                        enable_mse=enable_mse, enable_graph=enable_graph, verbose=1)
     models = (encoder, decoder)
 
     vae.compile(optimizer='adam', loss=vae_loss)
