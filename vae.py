@@ -12,6 +12,7 @@ from keras.losses import mse, binary_crossentropy
 from keras.utils import plot_model
 from keras import backend as K
 
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
@@ -60,7 +61,11 @@ def plot_results(models,
     z_mean, _, _ = encoder.predict(x_test,
                                    batch_size=batch_size)
     plt.figure(figsize=(12, 10))
-    plt.scatter(z_mean[:, 0], z_mean[:, 1], c=y_test)
+    if len(y_test.shape) > 1:
+        plt.scatter(z_mean[:, 0], z_mean[:, 1], c=np.argmax(y_test, axis=1))
+    else:
+        plt.scatter(z_mean[:, 0], z_mean[:, 1], c=y_test)
+
     plt.colorbar()
     plt.xlabel("z[0]")
     plt.ylabel("z[1]")
@@ -108,6 +113,9 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
         https://towardsdatascience.com/advanced-keras-constructing-complex-custom-losses-and-metrics-c07ca130a618
     """
     def loss(y_true, y_pred):
+        t_true = K.flatten(y_true)
+        t_pred = K.flatten(y_pred)
+
         # VAE loss = mse_loss or xent_loss + kl_loss
         if enable_mse:
             reconstruction_loss = mse(y_true, y_pred)
@@ -116,10 +124,10 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
                                                     y_pred)
 
         reconstruction_loss *= original_dim
-        kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+        kl_loss = 1 + K.flatten(z_log_var) - K.square(K.flatten(z_mean)) - K.exp(K.flatten(z_log_var))
         kl_loss = K.sum(kl_loss, axis=-1)
         kl_loss *= -0.5
-        return K.mean(reconstruction_loss + kl_loss)
+        return reconstruction_loss + kl_loss
 
     # Return a function
     return loss
@@ -168,8 +176,9 @@ def build_vae(input_shape: tuple,
         kernel_size = 3
         inputs = Input(shape=input_shape, name='encoder_input')
         x = Conv2D(filters=4, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(inputs)
-        x = Conv2D(filters=8    , kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
+        x = Conv2D(filters=8, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
         shape = K.int_shape(x)[1:]
+
         x = Flatten()(x)
         x = Dense(intermediate_dim, activation='relu')(x)
         z_mean = Dense(latent_dim, name='z_mean')(x)
@@ -190,7 +199,7 @@ def build_vae(input_shape: tuple,
         x = Dense(np.prod(shape), activation='relu')(latent_inputs)
         x = Reshape(shape)(x)
         x = Conv2DTranspose(filters=4, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
-        outputs = Conv2DTranspose(filters=8, kernel_size=kernel_size, activation="sigmoid", strides=2, padding="same")(x)
+        outputs = Conv2DTranspose(filters=1, kernel_size=kernel_size, activation="sigmoid", strides=2, padding="same")(x)
 
         # instantiate decoder model
         decoder = Model(latent_inputs, outputs, name='decoder')

@@ -69,7 +69,7 @@ def test_mnist_1d():
     latent_dim = 2
 
     vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=latent_dim,
-                                        enable_mse=enable_mse, enable_graph=enable_graph)
+                                        enable_mse=enable_mse, enable_graph=enable_graph, verbose=1)
     models = (encoder, decoder)
 
     vae.compile(optimizer='adam', loss=vae_loss)
@@ -110,7 +110,7 @@ def test_mnist_2d():
     # network parameters
     input_shape = x_train[0].shape
     batch_size = 128
-    epochs = 3
+    epochs = 1
     enable_graph = False
     latent_dim = 2
 
