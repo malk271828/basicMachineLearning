@@ -61,6 +61,7 @@ def plot_results(models,
     z_mean, _, _ = encoder.predict(x_test,
                                    batch_size=batch_size)
     plt.figure(figsize=(12, 10))
+
     if len(y_test.shape) > 1:
         plt.scatter(z_mean[:, 0], z_mean[:, 1], c=np.argmax(y_test, axis=1))
     else:
@@ -113,8 +114,14 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
         https://towardsdatascience.com/advanced-keras-constructing-complex-custom-losses-and-metrics-c07ca130a618
     """
     def loss(y_true, y_pred):
-        t_true = K.flatten(y_true)
-        t_pred = K.flatten(y_pred)
+        if len(y_true[0].shape) > 1:
+            # 2D input
+            # TODO: check difference between using reshape or flatten
+            # batch_size = 100
+            # y_true = K.reshape(y_true, (batch_size, -1))
+            # y_pred = K.reshape(y_pred, (batch_size, -1))
+            y_true = K.flatten(y_true)
+            y_pred = K.flatten(y_pred)
 
         # VAE loss = mse_loss or xent_loss + kl_loss
         if enable_mse:
@@ -124,10 +131,10 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
                                                     y_pred)
 
         reconstruction_loss *= original_dim
-        kl_loss = 1 + K.flatten(z_log_var) - K.square(K.flatten(z_mean)) - K.exp(K.flatten(z_log_var))
+        kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
         kl_loss = K.sum(kl_loss, axis=-1)
         kl_loss *= -0.5
-        return reconstruction_loss + kl_loss
+        return K.mean(reconstruction_loss + kl_loss)
 
     # Return a function
     return loss

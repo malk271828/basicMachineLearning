@@ -64,7 +64,7 @@ def test_mnist_1d():
     # network parameters
     input_shape = (original_dim, )
     batch_size = 128
-    epochs = 3
+    epochs = 10
     enable_graph = False
     latent_dim = 2
 
@@ -109,8 +109,8 @@ def test_mnist_2d():
 
     # network parameters
     input_shape = x_train[0].shape
-    batch_size = 128
-    epochs = 1
+    batch_size = 100
+    epochs = 50
     enable_graph = False
     latent_dim = 2
 
@@ -128,8 +128,7 @@ def test_mnist_2d():
     # https://github.com/tensorflow/tensorflow/issues/21894
     vae.fit(x_train, x_train,
             epochs=epochs,
-            batch_size=batch_size,
-            validation_data=(x_test, x_test))
+            batch_size=batch_size)
     vae.save_weights('vae_mlp_mnist.h5')
 
     plot_results(models,
