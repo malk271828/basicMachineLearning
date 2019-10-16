@@ -106,7 +106,7 @@ def plot_results(models,
     plt.show()
 
 # Define custom loss
-def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
+def vae_loss(enable_mse, beta, original_dim, z_mean, z_log_var):
     """
     Reference
     ---------
@@ -134,14 +134,15 @@ def vae_loss(enable_mse, original_dim, z_mean, z_log_var):
         kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
         kl_loss = K.sum(kl_loss, axis=-1)
         kl_loss *= -0.5
-        return K.mean(reconstruction_loss + kl_loss)
+        return K.mean(reconstruction_loss + beta*kl_loss)
 
     # Return a function
     return loss
 
 def build_vae(input_shape: tuple,
               latent_dim: int,
-              enable_mse: bool,
+              beta: float = 1.0,
+              enable_mse: bool = False,
               enable_graph: bool = False,
               verbose: int = 0):
     intermediate_dim = 512
@@ -218,4 +219,4 @@ def build_vae(input_shape: tuple,
     outputs = decoder(encoder(inputs)[2])
     vae = Model(inputs, outputs, name='vae_mlp')
 
-    return vae, encoder, decoder, vae_loss(enable_mse, original_dim, z_mean, z_log_var)
+    return vae, encoder, decoder, vae_loss(enable_mse, beta, original_dim, z_mean, z_log_var)
