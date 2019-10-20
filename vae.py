@@ -112,6 +112,8 @@ def vae_loss(enable_mse, beta, original_dim, z_mean, z_log_var):
     ---------
         http://louistiao.me/posts/implementing-variational-autoencoders-in-keras-beyond-the-quickstart-tutorial/
         https://towardsdatascience.com/advanced-keras-constructing-complex-custom-losses-and-metrics-c07ca130a618
+        - How to determine "filters" parameter in Conv2D layer:
+        https://stackoverflow.com/questions/48243360/how-to-determine-the-filter-parameter-in-the-keras-conv2d-function
     """
     def loss(y_true, y_pred):
         if len(y_true[0].shape) > 1:
@@ -134,6 +136,8 @@ def vae_loss(enable_mse, beta, original_dim, z_mean, z_log_var):
         kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
         kl_loss = K.sum(kl_loss, axis=-1)
         kl_loss *= -0.5
+
+        # If you remove mean layer of tensorflow backend, this step equivalent to sum layer.
         return K.mean(reconstruction_loss + beta*kl_loss)
 
     # Return a function
@@ -181,10 +185,10 @@ def build_vae(input_shape: tuple,
             plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
     else:
         filters = 2
-        kernel_size = 3
+        kernel_size = 5
         inputs = Input(shape=input_shape, name='encoder_input')
-        x = Conv2D(filters=4, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(inputs)
-        x = Conv2D(filters=8, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
+        x = Conv2D(filters=8, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(inputs)
+        x = Conv2D(filters=16, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
         shape = K.int_shape(x)[1:]
 
         x = Flatten()(x)
@@ -206,7 +210,7 @@ def build_vae(input_shape: tuple,
         latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
         x = Dense(np.prod(shape), activation='relu')(latent_inputs)
         x = Reshape(shape)(x)
-        x = Conv2DTranspose(filters=4, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
+        x = Conv2DTranspose(filters=8, kernel_size=kernel_size, activation="relu", strides=2, padding="same")(x)
         outputs = Conv2DTranspose(filters=1, kernel_size=kernel_size, activation="sigmoid", strides=2, padding="same")(x)
 
         # instantiate decoder model
