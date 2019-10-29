@@ -5,6 +5,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from sklearn.manifold import TSNE
+
 from keras.layers import Lambda, Input, Dense, Conv2D, Conv2DTranspose, Flatten, Reshape
 from keras.models import Model
 from keras.datasets import mnist
@@ -60,12 +62,17 @@ def plot_results(models,
     # display a 2D plot of the digit classes in the latent space
     z_mean, _, _ = encoder.predict(x_test,
                                    batch_size=batch_size)
+
     plt.figure(figsize=(12, 10))
 
     if len(y_test.shape) > 1:
-        plt.scatter(z_mean[:, 0], z_mean[:, 1], c=np.argmax(y_test, axis=1))
+        colormap = np.argmax(y_test, axis=1)
     else:
-        plt.scatter(z_mean[:, 0], z_mean[:, 1], c=y_test)
+        colormap = y_test
+
+    if z_mean.shape[1] > 2:
+        z_mean = TSNE(n_components=2).fit_transform(z_mean)
+    plt.scatter(z_mean[:, 0], z_mean[:, 1], c=colormap)
 
     plt.colorbar()
     plt.xlabel("z[0]")
