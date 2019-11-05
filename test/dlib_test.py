@@ -6,6 +6,7 @@ sys.path.insert(0, os.getcwd())
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
+from imutils import face_utils
 import pytest
 import cv2
 
@@ -46,6 +47,7 @@ def test_load(expFixture):
     Reference
     ----------
         https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/
+        https://towardsdatascience.com/facial-mapping-landmarks-with-dlib-python-160abcf7d672
     """
     cap = cv2.VideoCapture(expFixture.fileID+".mp4")
 
@@ -56,15 +58,29 @@ def test_load(expFixture):
     # initialize dlib's face detector (HOG-based) and then create
     # the facial landmark predictor
     detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor(SHAPE_PREDICTOR)
+    predictor = dlib.shape_predictor(expFixture.SHAPE_PREDICTOR)
 
     # Read until video is completed
     while(cap.isOpened()):
         # Capture frame-by-frame
         ret, frame = cap.read()
-        if ret == True:    
-            # Display the resulting frame
-            cv2.imshow('Frame',frame)
+        if ret:
+            # Converting the image to gray scale
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            rects = detector(gray, 0)
+
+            # For each detected face, find the landmark.
+            for (i, rect) in enumerate(rects):
+                # Make the prediction and transfom it to numpy array
+                shape = predictor(gray, rect)
+                shape = face_utils.shape_to_np(shape)
+            
+                # Draw on our image, all the finded cordinate points (x,y) 
+                for (x, y) in shape:
+                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+
+            # Show the image
+            cv2.imshow("Output", frame)
 
             # Press Q on keyboard to  exit
             if cv2.waitKey(25) & 0xFF == ord('q'):
