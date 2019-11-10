@@ -30,7 +30,6 @@ def test_dataFetch(expFixture):
         >>> aplay -f S16_LE -c2 -r22050 soundfile.raw
     """
     from pytube import YouTube
-    expFixture.fileID = "eIu0CXKekI4"
 
     yt = YouTube("https://youtu.be/"+expFixture.fileID)
     if not os.path.exists(expFixture.fileID+".mp4"):
@@ -42,4 +41,6 @@ def test_dataFetch(expFixture):
 
 def test_load(expFixture):
     le = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
-    le.getLandmarks(verbose=1)
+
+    landmarks_list = le.getLandmarks(verbose=1)
+    print(landmarks_list)

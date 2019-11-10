@@ -1,6 +1,12 @@
+import os
+from os.path import splitext, basename, exists
+import numpy as np
+from datetime import datetime
+
 from imutils import face_utils
 import cv2
 from tqdm import tqdm
+from colorama import *
 
 # Machine Learning Libraries
 import dlib
@@ -20,8 +26,10 @@ class landmarksExtractor():
         """
         if isinstance(fileName, str):
             self.cap = cv2.VideoCapture(fileName)
+            self.cachePath = splitext(basename(fileName))[0] + ".npz"
         else:
             self.cap = cv2.VideoCapture(0)
+            self.cachePath = str(datetime.now()) + ".npz"
 
         # Check if camera opened successfully
         if (self.cap.isOpened()== False): 
@@ -33,39 +41,54 @@ class landmarksExtractor():
         self.predictor = dlib.shape_predictor(shape_predictor)
 
     def getLandmarks(self, verbose=0):
-        # Read until video is completed
-        while(self.cap.isOpened()):
-            # Capture frame-by-frame
-            ret, frame = self.cap.read()
-            if ret:
-                # Converting the image to gray scale
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                rects = self.detector(gray, 0)
+        # search cache
+        if exists(self.cachePath):
+            data = np.load(self.cachePath)
+            if verbose > 0:
+                print(Fore.CYAN + "cache file has been loaded :{0}".format(self.cachePath))
+                print("{0}".format(data["landmarks"].shape) + Style.RESET_ALL)
+            return data["landmarks"]
+        else:
 
-                # For each detected face, find the landmark.
-                for (i, rect) in enumerate(rects):
-                    # Make the prediction and transfom it to numpy array
-                    landmarks = self.predictor(gray, rect)
-                    landmarks = face_utils.shape_to_np(landmarks)
+            landmarks_list = list()
+            # Read until video is completed
+            while(self.cap.isOpened()):
+                # Capture frame-by-frame
+                ret, frame = self.cap.read()
+                if ret:
+                    # Converting the image to gray scale
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    rects = self.detector(gray, 0)
 
-                    # Draw on our image, all the finded cordinate points (x,y)
+                    # For each detected face, find the landmark.
+                    for (i, rect) in enumerate(rects):
+                        # Make the prediction and transfom it to numpy array
+                        landmarks = self.predictor(gray, rect)
+                        landmarks = face_utils.shape_to_np(landmarks)
+                        landmarks_list.append(landmarks)
+
+                        # Draw on our image, all the finded cordinate points (x,y)
+                        if verbose > 0:
+                            for (x, y) in landmarks:
+                                cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+
                     if verbose > 0:
-                        for (x, y) in landmarks:
-                            cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+                        # Show the image
+                        cv2.imshow("Output", frame)
 
-                if verbose > 0:
-                    # Show the image
-                    cv2.imshow("Output", frame)
+                    # Press Q on keyboard to  exit
+                    if cv2.waitKey(25) & 0xFF == ord('q'):
+                        break 
+                    # Break the loop
+                else: 
+                    break
+        
+            # When everything done, release the video capture object
+            self.cap.release()
+        
+            # Closes all the frames
+            cv2.destroyAllWindows()
 
-                # Press Q on keyboard to  exit
-                if cv2.waitKey(25) & 0xFF == ord('q'):
-                    break 
-                # Break the loop
-            else: 
-                break
-    
-        # When everything done, release the video capture object
-        self.cap.release()
-    
-        # Closes all the frames
-        cv2.destroyAllWindows()
+            np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
+
+            return landmarks_list
