@@ -11,6 +11,8 @@ from colorama import *
 # Machine Learning Libraries
 import dlib
 
+DEFAULT_CACHE_PATH = "./cache/"
+
 class landmarksExtractor():
     """
     Reference
@@ -20,16 +22,21 @@ class landmarksExtractor():
     """
     def __init__(self,
                  shape_predictor:str,
-                 fileName):
+                 fileName,
+                 cache_dir:str = DEFAULT_CACHE_PATH):
         """
         :param fileName: If this argument is not a string, video stream will be opened.
         """
+        self.cache_dir = cache_dir
+        if not exists(cache_dir):
+            os.makedirs(self.cache_dir)
+
         if isinstance(fileName, str):
             self.cap = cv2.VideoCapture(fileName)
-            self.cachePath = splitext(basename(fileName))[0] + ".npz"
+            self.cachePath = self.cache_dir + splitext(basename(fileName))[0] + ".npz"
         else:
             self.cap = cv2.VideoCapture(0)
-            self.cachePath = str(datetime.now()) + ".npz"
+            self.cachePath = self.cache_dir + str(datetime.now()) + ".npz"
 
         # Check if camera opened successfully
         if (self.cap.isOpened()== False): 
@@ -49,7 +56,6 @@ class landmarksExtractor():
                 print("{0}".format(data["landmarks"].shape) + Style.RESET_ALL)
             return data["landmarks"]
         else:
-
             landmarks_list = list()
             # Read until video is completed
             while(self.cap.isOpened()):
@@ -89,6 +95,7 @@ class landmarksExtractor():
             # Closes all the frames
             cv2.destroyAllWindows()
 
+            #if not exists()
             np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
 
             return landmarks_list

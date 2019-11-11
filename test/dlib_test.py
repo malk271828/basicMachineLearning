@@ -39,11 +39,15 @@ def test_dataFetch(expFixture):
 
     subprocess.call(["ffmpeg -i {0}.mp4 -vn -f s16le -acodec pcm_s16le soundfile.raw".format(expFixture.fileID)], shell=True, cwd=".")
 
-def test_load(expFixture):
-    le = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
+def test_landmarks(expFixture):
+    # w/o specifying cache path
+    le1 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
 
-    landmarks_list = le.getLandmarks(verbose=1)
-    print(landmarks_list)
+    # specifying cache path
+    le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath, cache_dir="../cache2/")
+
+    landmarks_list = le1.getLandmarks(verbose=1)
+    landmarks_list = le2.getLandmarks(verbose=1)
 
 def test_batch(expFixture):
     be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*2)
