@@ -92,3 +92,19 @@ class landmarksExtractor():
             np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
 
             return landmarks_list
+
+class batchExtractor():
+    def __init__(self,
+                 shape_predictor:str,
+                 filePathList:list):
+        self.filePathList = filePathList
+        self.shape_predictor = shape_predictor
+    
+    def getXy(self):
+        samples = list()
+        for filePath in self.filePathList:
+            le = landmarksExtractor(self.shape_predictor, filePath)
+            landmarks = le.getLandmarks(verbose=1)
+            samples.append(landmarks)
+
+        return samples

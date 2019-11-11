@@ -66,9 +66,9 @@ def test_mnist_1d():
     batch_size = 128
     epochs = 10
     enable_graph = False
-    latent_dim = 2
+    latent_dim = 64
 
-    vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=latent_dim,
+    vae, encoder, decoder, vae_loss = build_vae(input_shape, beta=1.0, latent_dim=latent_dim,
                                         enable_mse=enable_mse, enable_graph=enable_graph, verbose=1)
     models = (encoder, decoder)
 
@@ -109,8 +109,8 @@ def test_mnist_2d():
 
     # network parameters
     input_shape = x_train[0].shape
-    batch_size = 100
-    epochs = 50
+    batch_size = 128
+    epochs = 10
     enable_graph = False
     latent_dim = 2
 

@@ -44,3 +44,7 @@ def test_load(expFixture):
 
     landmarks_list = le.getLandmarks(verbose=1)
     print(landmarks_list)
+
+def test_batch(expFixture):
+    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*2)
+    be.getXy()

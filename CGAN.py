@@ -148,6 +148,7 @@ def build_generator(verbose, kwargs):
         vae = Model(inputs, outputs, name='vae_mlp')
 
         # define reconstruction loss
+        # https://towardsdatascience.com/advanced-keras-constructing-complex-custom-losses-and-metrics-c07ca130a618
         reconstruction_loss = losses.binary_crossentropy(inputs, outputs)
         reconstruction_loss *= original_dim
         kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
@@ -499,10 +500,10 @@ def test_generator_1d_binary():
     print("--------------------------------------")
     z = np.random.uniform(size=len(X))
 
-    g = build_generator(1, {"input_shape": feature_shape, "num_class": 2, "hidden_size": 8, "output_shape": feature_shape[0],
+    g = build_generator(1, {"input_shape": feature_shape, "num_class": 2, "hidden_size": 8, "output_shape": feature_shape,
                     "latent_dim": 32, "model_type": "vae"})
 
-    g.compile(optimizer=Adam(0.0002, 0.5))    
+    g.compile(loss=["mean_squared_error"], optimizer=Adam(0.0002, 0.5))
     g.fit(X, batch_size=100, epochs=300)
     # predicted_y = g.predict(x=[z, y])
 
