@@ -109,6 +109,9 @@ class batchExtractor():
 
     def getX(self, file_squeeze=False, verbose=0):
         if file_squeeze:
+            landmark_sample = landmarksExtractor(self.shape_predictor, filePathList[0]).getLandmarks(verbose=0)
+            sample_shape = landmark_sample.shape[0]
+            print(sample_shape)
             raise Exception("not implemented")
         else:
             samples = list()
