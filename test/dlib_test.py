@@ -50,6 +50,10 @@ def test_landmarks(expFixture):
     landmarks_list = le2.getLandmarks(verbose=1)
 
 def test_batch(expFixture):
-    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*5)
+    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*3)
+    X = be.getX(verbose=2)
+    print(X.shape)
+
+    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*3)
     X = be.getX(verbose=2)
     print(X.shape)

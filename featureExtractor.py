@@ -121,18 +121,13 @@ class batchExtractor():
                 print(Fore.CYAN + "concat cache file has been loaded :{0}".format(self.concatCachePath))
                 print("{0}".format(samples.shape) + Style.RESET_ALL)
         else:
-            if file_squeeze:
-                landmark_sample = landmarksExtractor(self.shape_predictor, filePathList[0], cache_dir=self.cache_dir).getLandmarks(verbose=0)
-                sample_shape = landmark_sample.shape[0]
-                print(sample_shape)
-                raise Exception("not implemented")
-            else:
-                samples = list()
+            samples = list()
             for filePath in self.filePathList:
                 le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir)
                 landmarks = le.getLandmarks(verbose=verbose)
                 samples.append(landmarks)
 
+            samples = np.reshape(samples, newshape=(-1, 68, 2))
             np.savez(self.concatCachePath, landmarks=samples, allow_pickle=True)
 
         return samples
