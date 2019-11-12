@@ -2,6 +2,7 @@ import os
 from os.path import splitext, basename, exists
 import numpy as np
 from datetime import datetime
+import hashlib
 
 from imutils import face_utils
 import cv2
@@ -78,7 +79,7 @@ class landmarksExtractor():
                             for (x, y) in landmarks:
                                 cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-                    if verbose > 0:
+                    if verbose > 1:
                         # Show the image
                         cv2.imshow("Output", frame)
 
@@ -103,21 +104,35 @@ class landmarksExtractor():
 class batchExtractor():
     def __init__(self,
                  shape_predictor:str,
-                 filePathList:list):
+                 filePathList:list,
+                 cache_dir:str = DEFAULT_CACHE_PATH):
         self.filePathList = filePathList
         self.shape_predictor = shape_predictor
+        concatPath = "".join(filePathList)
+        self.concatCachePath = cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
+        self.cache_dir = cache_dir
 
-    def getX(self, file_squeeze=False, verbose=0):
-        if file_squeeze:
-            landmark_sample = landmarksExtractor(self.shape_predictor, filePathList[0]).getLandmarks(verbose=0)
-            sample_shape = landmark_sample.shape[0]
-            print(sample_shape)
-            raise Exception("not implemented")
+    def getX(self,
+             file_squeeze:bool = False,
+             verbose:int = 0):
+        if exists(self.concatCachePath):
+            samples = np.load(self.concatCachePath)["landmarks"]
+            if verbose > 0:
+                print(Fore.CYAN + "concat cache file has been loaded :{0}".format(self.concatCachePath))
+                print("{0}".format(samples.shape) + Style.RESET_ALL)
         else:
-            samples = list()
-        for filePath in self.filePathList:
-            le = landmarksExtractor(self.shape_predictor, filePath)
-            landmarks = le.getLandmarks(verbose=verbose)
-            samples.append(landmarks)
+            if file_squeeze:
+                landmark_sample = landmarksExtractor(self.shape_predictor, filePathList[0], cache_dir=self.cache_dir).getLandmarks(verbose=0)
+                sample_shape = landmark_sample.shape[0]
+                print(sample_shape)
+                raise Exception("not implemented")
+            else:
+                samples = list()
+            for filePath in self.filePathList:
+                le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir)
+                landmarks = le.getLandmarks(verbose=verbose)
+                samples.append(landmarks)
+
+            np.savez(self.concatCachePath, landmarks=samples, allow_pickle=True)
 
         return samples
