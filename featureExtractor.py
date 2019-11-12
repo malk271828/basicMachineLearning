@@ -95,7 +95,7 @@ class landmarksExtractor():
             # Closes all the frames
             cv2.destroyAllWindows()
 
-            #if not exists()
+            # save extracted landmarks
             np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
 
             return landmarks_list
@@ -106,12 +106,15 @@ class batchExtractor():
                  filePathList:list):
         self.filePathList = filePathList
         self.shape_predictor = shape_predictor
-    
-    def getXy(self):
-        samples = list()
+
+    def getX(self, file_squeeze=False, verbose=0):
+        if file_squeeze:
+            raise Exception("not implemented")
+        else:
+            samples = list()
         for filePath in self.filePathList:
             le = landmarksExtractor(self.shape_predictor, filePath)
-            landmarks = le.getLandmarks(verbose=1)
+            landmarks = le.getLandmarks(verbose=verbose)
             samples.append(landmarks)
 
         return samples

@@ -51,4 +51,4 @@ def test_landmarks(expFixture):
 
 def test_batch(expFixture):
     be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*2)
-    be.getXy()
+    X = be.getX(verbose=1)
