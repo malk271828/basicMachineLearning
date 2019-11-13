@@ -13,6 +13,7 @@ from colorama import *
 import dlib
 
 DEFAULT_CACHE_PATH = "./cache/"
+DLIB_CENTER_INDEX = 30
 
 class landmarksExtractor():
     """
@@ -24,11 +25,13 @@ class landmarksExtractor():
     def __init__(self,
                  shape_predictor:str,
                  fileName,
-                 cache_dir:str = DEFAULT_CACHE_PATH):
+                 cache_dir:str = DEFAULT_CACHE_PATH,
+                 visualize_window:bool = False):
         """
         :param fileName: If this argument is not a string, video stream will be opened.
         """
         self.cache_dir = cache_dir
+        self.visualize_window = visualize_window
         if not exists(cache_dir):
             os.makedirs(self.cache_dir)
 
@@ -58,6 +61,7 @@ class landmarksExtractor():
             return data["landmarks"]
         else:
             landmarks_list = list()
+            idx_frame = 0
             # Read until video is completed
             while(self.cap.isOpened()):
                 # Capture frame-by-frame
@@ -72,16 +76,23 @@ class landmarksExtractor():
                         # Make the prediction and transfom it to numpy array
                         landmarks = self.predictor(gray, rect)
                         landmarks = face_utils.shape_to_np(landmarks)
-                        landmarks_list.append(landmarks)
+                        landmarks_list.append(landmarks - landmarks[DLIB_CENTER_INDEX])
 
                         # Draw on our image, all the finded cordinate points (x,y)
                         if verbose > 0:
-                            for (x, y) in landmarks:
-                                cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+                            for (i, (x, y)) in enumerate(landmarks):
+                                if i == DLIB_CENTER_INDEX:
+                                    cv2.circle(frame, (x, y), 2, (255, 0, 0), -1)
+                                else:
+                                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
                     if verbose > 1:
-                        # Show the image
-                        cv2.imshow("Output", frame)
+                        if self.visualize_window:
+                            # Show the image
+                            cv2.imshow("Output", frame)
+                        else:
+                            cv2.imwrite(self.cache_dir + "{0:03}.png".format(idx_frame), frame)
+                            idx_frame += 1
 
                     # Press Q on keyboard to  exit
                     if cv2.waitKey(25) & 0xFF == ord('q'):
