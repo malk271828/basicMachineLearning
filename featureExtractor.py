@@ -121,7 +121,6 @@ class batchExtractor():
                 print(Fore.CYAN + "concat cache file has been loaded :{0}".format(self.concatCachePath))
                 print("{0}".format(samples.shape) + Style.RESET_ALL)
         else:
-            samples = list()
             if verbose > 0:
                 fileListIterator = tqdm(self.filePathList, ascii=True)
             else:
@@ -129,7 +128,11 @@ class batchExtractor():
             for filePath in fileListIterator:
                 le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir)
                 landmarks = le.getLandmarks(verbose=verbose)
-                samples.append(landmarks)
+                if "samples" in locals():
+                    samples = np.vstack([samples, landmarks])
+                else:
+                    samples = landmarks
+
 
             samples = np.reshape(samples, newshape=(-1, 68, 2))
             np.savez(self.concatCachePath, landmarks=samples, allow_pickle=True)
