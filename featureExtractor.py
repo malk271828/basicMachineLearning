@@ -122,7 +122,11 @@ class batchExtractor():
                 print("{0}".format(samples.shape) + Style.RESET_ALL)
         else:
             samples = list()
-            for filePath in self.filePathList:
+            if verbose > 0:
+                fileListIterator = tqdm(self.filePathList, ascii=True)
+            else:
+                fileListIterator = self.filePathList
+            for filePath in fileListIterator:
                 le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir)
                 landmarks = le.getLandmarks(verbose=verbose)
                 samples.append(landmarks)
