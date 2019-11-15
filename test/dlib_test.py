@@ -56,4 +56,4 @@ def test_batch(expFixture):
 
     be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*3)
     X = be.getX(verbose=2)
-    print(X.shape)
+    print(X)

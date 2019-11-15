@@ -116,36 +116,41 @@ class batchExtractor():
     def __init__(self,
                  shape_predictor:str,
                  filePathList:list,
-                 cache_dir:str = DEFAULT_CACHE_PATH):
+                 cache_dir:str = DEFAULT_CACHE_PATH,
+                 visualize_window:bool = False):
         self.filePathList = filePathList
         self.shape_predictor = shape_predictor
         concatPath = "".join(filePathList)
         self.concatCachePath = cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
         self.cache_dir = cache_dir
+        self.visualize_window = visualize_window
 
     def getX(self,
-             file_squeeze:bool = False,
+             file_squeeze:bool = True,
              verbose:int = 0):
         if exists(self.concatCachePath):
+            # load serialized feature file
             samples = np.load(self.concatCachePath)["landmarks"]
             if verbose > 0:
                 print(Fore.CYAN + "concat cache file has been loaded :{0}".format(self.concatCachePath))
                 print("{0}".format(samples.shape) + Style.RESET_ALL)
         else:
+            # extract feature from each file
             if verbose > 0:
                 fileListIterator = tqdm(self.filePathList, ascii=True)
             else:
                 fileListIterator = self.filePathList
             for filePath in fileListIterator:
-                le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir)
+                le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir,
+                                        visualize_window=self.visualize_window)
                 landmarks = le.getLandmarks(verbose=verbose)
                 if "samples" in locals():
                     samples = np.vstack([samples, landmarks])
                 else:
                     samples = landmarks
 
-
-            samples = np.reshape(samples, newshape=(-1, 68, 2))
+            if file_squeeze:
+                samples = np.reshape(samples, newshape=(-1,) + samples.shape[2:])
             np.savez(self.concatCachePath, landmarks=samples, allow_pickle=True)
 
         return samples
