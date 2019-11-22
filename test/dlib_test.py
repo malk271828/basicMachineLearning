@@ -8,7 +8,8 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 
 import pytest
 
-from featureExtractor import *
+from landmarkExtractor import *
+from lombardFileSelector import *
 
 @pytest.fixture
 def expFixture():
@@ -57,3 +58,9 @@ def test_batch(expFixture):
     be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, [expFixture.filePath]*3)
     X = be.getX(verbose=2)
     print(X)
+
+def test_lombardFileSelector():
+    fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
+
+    fileSelector.getFileList("audio", verbose=1)
+    fileSelector.getFileList("visual", verbose=1)
