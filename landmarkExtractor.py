@@ -150,7 +150,7 @@ class batchExtractor():
                     samples = landmarks
 
             if file_squeeze:
-                samples = np.reshape(samples, newshape=(-1,) + samples.shape[2:])
+                samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
             np.savez(self.concatCachePath, landmarks=samples, allow_pickle=True)
 
         return samples
