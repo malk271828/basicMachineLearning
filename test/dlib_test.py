@@ -7,6 +7,9 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
 import pytest
+import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 # Machine Learning
 from sklearn.metrics import classification_report
@@ -78,6 +81,18 @@ def test_lombardFileSelector():
 
     fileSelector.getFileList("audio", verbose=1)
     fileSelector.getFileList("visual", verbose=1)
+
+def test_mouth_open(expFixture):
+    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath[1:2])
+    X = be.getX(verbose=2)
+
+    upperLipY = pd.DataFrame([landmarks[DLIB_UPPERLIP_INDEX*2+1] for landmarks in X])
+    lowerLipY = pd.DataFrame([landmarks[DLIB_LOWERLIP_INDEX*2+1] for landmarks in X])
+
+    df = pd.concat([upperLipY, lowerLipY, lowerLipY - upperLipY], axis=1)
+    df.columns=["upperLipY", "lowerLipY", "MouthOpenLength"]
+    df.plot()
+    plt.show()
 
 @pytest.mark.vae
 def test_vae_train(expFixture):

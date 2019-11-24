@@ -14,6 +14,8 @@ import dlib
 
 DEFAULT_CACHE_PATH = "./cache/"
 DLIB_CENTER_INDEX = 30
+DLIB_UPPERLIP_INDEX = 62
+DLIB_LOWERLIP_INDEX = 66
 
 class landmarksExtractor():
     """
