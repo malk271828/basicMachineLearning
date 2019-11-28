@@ -29,7 +29,7 @@ def expFixture():
     class _expFixture:
         def __init__(self):
             fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
-            self.filePath = fileSelector.getFileList("visual")
+            self.filePath = fileSelector.getFileList("visual")[:10]
 
             # The following message indicates version mismatch between code and model.
             # RuntimeError: Unexpected version found while deserializing dlib::shape_predictor.
@@ -74,7 +74,7 @@ def test_batch(expFixture):
     X = be.getX(verbose=2)
     print(list(X[0]))
 
-    assert X[0][DLIB_CENTER_INDEX*2] == 0 and X[0][DLIB_CENTER_INDEX*2+1] == 0
+    assert X[0][landmarksExtractor.DLIB_CENTER_INDEX*2] == 0 and X[0][landmarksExtractor.DLIB_CENTER_INDEX*2+1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")

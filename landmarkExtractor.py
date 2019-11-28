@@ -12,18 +12,50 @@ from colorama import *
 # Machine Learning Libraries
 import dlib
 
-DEFAULT_CACHE_PATH = "./cache/"
-DLIB_CENTER_INDEX = 30
-DLIB_UPPERLIP_INDEX = 62
-DLIB_LOWERLIP_INDEX = 66
+class featureExtractor():
+    DEFAULT_CACHE_PATH = "./cache/"
 
-class landmarksExtractor():
+    def __init__(self,
+                 fileName:str,
+                 cache_dir:str = DEFAULT_CACHE_PATH):
+        self.cache_dir = cache_dir
+        if not exists(cache_dir):
+            os.makedirs(self.cache_dir)
+        self.cachePath = ""
+
+        if isinstance(fileName, str):
+            self.cachePath = self.cache_dir + splitext(basename(fileName))[0] + ".npz"
+        else:
+            self.cachePath = self.cache_dir + str(datetime.now()) + ".npz"
+
+    def loadFromCache(self,
+                      verbose=0):
+        if exists(self.cachePath):
+            data = np.load(self.cachePath, allow_pickle=True)
+            if verbose > 0:
+                print(Fore.CYAN + "cache file has been loaded :{0}".format(self.cachePath))
+                print("{0}".format(data["landmarks"].shape) + Style.RESET_ALL)
+            return data["landmarks"]
+        else:
+            raise FileNotFoundError
+
+    def saveToCache(self,
+                    landmarks_list,
+                    verbose=0):
+        np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
+
+class landmarksExtractor(featureExtractor):
     """
     Reference
     ----------
         https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/
         https://towardsdatascience.com/facial-mapping-landmarks-with-dlib-python-160abcf7d672
     """
+    DEFAULT_CACHE_PATH = "./cache/"
+    DLIB_CENTER_INDEX = 30
+    DLIB_UPPERLIP_INDEX = 62
+    DLIB_LOWERLIP_INDEX = 66
+
     def __init__(self,
                  shape_predictor:str,
                  fileName,
@@ -32,17 +64,15 @@ class landmarksExtractor():
         """
         :param fileName: If this argument is not a string, video stream will be opened.
         """
-        self.cache_dir = cache_dir
+        super().__init__(fileName=fileName, cache_dir=cache_dir)
         self.visualize_window = visualize_window
         if not exists(cache_dir):
             os.makedirs(self.cache_dir)
 
         if isinstance(fileName, str):
             self.cap = cv2.VideoCapture(fileName)
-            self.cachePath = self.cache_dir + splitext(basename(fileName))[0] + ".npz"
         else:
             self.cap = cv2.VideoCapture(0)
-            self.cachePath = self.cache_dir + str(datetime.now()) + ".npz"
 
         # Check if camera opened successfully
         if (self.cap.isOpened()== False): 
@@ -55,13 +85,9 @@ class landmarksExtractor():
 
     def getLandmarks(self, verbose=0):
         # search cache
-        if exists(self.cachePath):
-            data = np.load(self.cachePath)
-            if verbose > 0:
-                print(Fore.CYAN + "cache file has been loaded :{0}".format(self.cachePath))
-                print("{0}".format(data["landmarks"].shape) + Style.RESET_ALL)
-            return data["landmarks"]
-        else:
+        try:
+            landmarks_list = super().loadFromCache(verbose=verbose)
+        except FileNotFoundError:
             landmarks_list = list()
             idx_frame = 0
             # Read until video is completed
@@ -78,12 +104,12 @@ class landmarksExtractor():
                         # Make the prediction and transfom it to numpy array
                         landmarks = self.predictor(gray, rect)
                         landmarks = face_utils.shape_to_np(landmarks)
-                        landmarks_list.append(landmarks - landmarks[DLIB_CENTER_INDEX])
+                        landmarks_list.append(landmarks - landmarks[self.DLIB_CENTER_INDEX])
 
                         # Draw on our image, all the finded cordinate points (x,y)
                         if verbose > 0:
                             for (i, (x, y)) in enumerate(landmarks):
-                                if i == DLIB_CENTER_INDEX:
+                                if i == self.DLIB_CENTER_INDEX:
                                     cv2.circle(frame, (x, y), 2, (255, 0, 0), -1)
                                 else:
                                     cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
@@ -110,11 +136,13 @@ class landmarksExtractor():
             cv2.destroyAllWindows()
 
             # save extracted landmarks
-            np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
+            super().saveToCache(landmarks_list=landmarks_list, verbose=verbose)
 
             return landmarks_list
 
 class batchExtractor():
+    DEFAULT_CACHE_PATH = "./cache/"
+
     def __init__(self,
                  shape_predictor:str,
                  filePathList:list,
