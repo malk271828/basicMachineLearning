@@ -56,22 +56,20 @@ def test_dataFetch(expFixture):
 @pytest.mark.landmark
 def test_landmarks(expFixture):
     # w/o specifying cache path
-    le1 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
+    le1 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
 
     # specifying cache path
-    le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath, cache_dir="../cache2/")
+    le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
 
-    landmarks_list = le1.getLandmarks(verbose=1)
-    landmarks_list = le2.getLandmarks(verbose=1)
+    landmarks_list = le1.getX(fileName=expFixture.filePath[0], verbose=1)
+    landmarks_list = le2.getX(fileName=expFixture.filePath[0], verbose=1)
 
 @pytest.mark.landmark
 def test_batch(expFixture):
-    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
-    X = be.getX(verbose=2)
+    be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH))
+    X = be.getX(filePathList=expFixture.filePath, verbose=2)
+    X = be.getX(filePathList=expFixture.filePath, verbose=2)
     print(X.shape)
-
-    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
-    X = be.getX(verbose=2)
     print(list(X[0]))
 
     assert X[0][landmarksExtractor.DLIB_CENTER_INDEX*2] == 0 and X[0][landmarksExtractor.DLIB_CENTER_INDEX*2+1] == 0
@@ -83,11 +81,12 @@ def test_lombardFileSelector():
     fileSelector.getFileList("visual", verbose=1)
 
 def test_mouth_open(expFixture):
-    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath[1:2])
-    X = be.getX(verbose=2)
+    le = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
+    be = batchExtractor(le)
+    X = be.getX(filePathList=expFixture.filePath, verbose=2)
 
-    upperLipY = pd.DataFrame([landmarks[DLIB_UPPERLIP_INDEX*2+1] for landmarks in X])
-    lowerLipY = pd.DataFrame([landmarks[DLIB_LOWERLIP_INDEX*2+1] for landmarks in X])
+    upperLipY = pd.DataFrame([landmarks[le.DLIB_UPPERLIP_INDEX*2+1] for landmarks in X])
+    lowerLipY = pd.DataFrame([landmarks[le.DLIB_LOWERLIP_INDEX*2+1] for landmarks in X])
 
     df = pd.concat([upperLipY, lowerLipY, lowerLipY - upperLipY], axis=1)
     df.columns=["upperLipY", "lowerLipY", "MouthOpenLength"]
