@@ -14,6 +14,7 @@ import dlib
 
 class featureExtractor():
     DEFAULT_CACHE_PATH = "./cache/"
+    DEFAULT_CACHE_EXT = ".npz"
 
     def __init__(self,
                  fileName:str,
@@ -21,15 +22,14 @@ class featureExtractor():
         self.cache_dir = cache_dir
         if not exists(cache_dir):
             os.makedirs(self.cache_dir)
-        self.cachePath = ""
 
         if isinstance(fileName, str):
-            self.cachePath = self.cache_dir + splitext(basename(fileName))[0] + ".npz"
+            self.cachePath = self.cache_dir + splitext(basename(fileName))[0] + DEFAULT_CACHE_EXT
         else:
-            self.cachePath = self.cache_dir + str(datetime.now()) + ".npz"
+            self.cachePath = self.cache_dir + str(datetime.now()) + DEFAULT_CACHE_EXT
 
     def loadFromCache(self,
-                      verbose=0):
+                      verbose:int = 0):
         if exists(self.cachePath):
             data = np.load(self.cachePath, allow_pickle=True)
             if verbose > 0:
@@ -40,9 +40,12 @@ class featureExtractor():
             raise FileNotFoundError
 
     def saveToCache(self,
-                    landmarks_list,
-                    verbose=0):
+                    features_list: list,
+                    verbose:int = 0):
         np.savez(self.cachePath, landmarks=landmarks_list, allow_pickle=True)
+
+    def getX(self):
+        raise NotImplementedError
 
 class landmarksExtractor(featureExtractor):
     """
@@ -66,8 +69,6 @@ class landmarksExtractor(featureExtractor):
         """
         super().__init__(fileName=fileName, cache_dir=cache_dir)
         self.visualize_window = visualize_window
-        if not exists(cache_dir):
-            os.makedirs(self.cache_dir)
 
         if isinstance(fileName, str):
             self.cap = cv2.VideoCapture(fileName)
@@ -83,7 +84,7 @@ class landmarksExtractor(featureExtractor):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(shape_predictor)
 
-    def getLandmarks(self, verbose=0):
+    def getX(self, verbose=0):
         # search cache
         try:
             landmarks_list = super().loadFromCache(verbose=verbose)
@@ -136,7 +137,7 @@ class landmarksExtractor(featureExtractor):
             cv2.destroyAllWindows()
 
             # save extracted landmarks
-            super().saveToCache(landmarks_list=landmarks_list, verbose=verbose)
+            super().saveToCache(features_list=landmarks_list, verbose=verbose)
 
             return landmarks_list
 
@@ -173,7 +174,7 @@ class batchExtractor():
             for filePath in fileListIterator:
                 le = landmarksExtractor(self.shape_predictor, filePath, cache_dir=self.cache_dir,
                                         visualize_window=self.visualize_window)
-                landmarks = le.getLandmarks(verbose=verbose)
+                landmarks = le.getX(verbose=verbose)
                 if "samples" in locals():
                     samples = np.vstack([samples, landmarks])
                 else:
