@@ -20,6 +20,7 @@ import mlflow
 import mlflow.sklearn
 import mlflow.keras
 
+from featureExtractor import *
 from landmarkExtractor import *
 from lombardFileSelector import *
 from vae import *
@@ -61,8 +62,8 @@ def test_landmarks(expFixture):
     # specifying cache path
     le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
 
-    landmarks_list = le1.getX(fileName=expFixture.filePath[0], verbose=1)
-    landmarks_list = le2.getX(fileName=expFixture.filePath[0], verbose=1)
+    landmarks_list = le1.getX(fileName=expFixture.filePath[0], verbose=2)
+    landmarks_list = le2.getX(fileName=expFixture.filePath[0], verbose=2)
 
 @pytest.mark.landmark
 def test_batch(expFixture):
