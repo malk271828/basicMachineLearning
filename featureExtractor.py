@@ -56,11 +56,13 @@ class featureExtractor():
                         verbose:int = 0):
         raise NotImplemented
 
-class batchExtractor():
-    DEFAULT_CACHE_PATH = "./cache/"
-
+class batchExtractor(featureExtractor):
+    """
+    Decorator pattern batchExtractor
+    """
     def __init__(self,
                  singleFileExtractor:featureExtractor):
+        super().__init__()
         self.singleFileExtractor = singleFileExtractor
 
     def getX(self,
@@ -69,28 +71,27 @@ class batchExtractor():
              verbose:int = 0):
         concatPath = "".join(filePathList)
         self.concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
+        self.filePathList = filePathList
+        self.file_squeeze = file_squeeze
 
-        if exists(self.concatCachePath):
-            # load serialized feature file
-            samples = np.load(self.concatCachePath)["features"]
-            if verbose > 0:
-                print(Fore.CYAN + "concat cache file has been loaded :{0}".format(self.concatCachePath))
-                print("{0}".format(samples.shape) + Style.RESET_ALL)
+        return super().getX(self.concatCachePath)
+
+    def _extractFeature(self,
+                        fileName:str,
+                        verbose:int = 0):
+        # extract feature from each file
+        if verbose > 0:
+            fileListIterator = tqdm(filePathList, ascii=True)
         else:
-            # extract feature from each file
-            if verbose > 0:
-                fileListIterator = tqdm(filePathList, ascii=True)
+            fileListIterator = self.filePathList
+        for filePath in fileListIterator:
+            features = self.singleFileExtractor.getX(fileName=filePath, verbose=verbose)
+            if "samples" in locals():
+                samples = np.vstack([samples, features])
             else:
-                fileListIterator = self.filePathList
-            for filePath in fileListIterator:
-                features = self.singleFileExtractor.getX(fileName=filePath, verbose=verbose)
-                if "samples" in locals():
-                    samples = np.vstack([samples, features])
-                else:
-                    samples = features
+                samples = features
 
-            if file_squeeze:
-                samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
-            np.savez(self.concatCachePath, features=samples, allow_pickle=True)
+        if self.file_squeeze:
+            samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
 
         return samples
