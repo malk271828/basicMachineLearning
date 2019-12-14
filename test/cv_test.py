@@ -1,25 +1,27 @@
-from random import seed
-from random import random, randrange
-# seed random number generator
-seed(1)
+import os
+import sys
+import warnings
+import subprocess
+sys.path.insert(0, os.getcwd())
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
 
-# Image Processing
-from PIL import Image, ImageDraw, ImageChops
+from random import seed, random, randrange
+seed(123)
 
-# Machine Learning Libraries
-from sklearn.preprocessing import MinMaxScaler
+from cv_util import generateNormalizedPatchedImage
 
 def test_image():
-    WIDTH = 500
-    HEIGHT = 300
-    src = Image.new('RGB', (WIDTH, HEIGHT), (0, 0, 0))
+    n_sample = 20
+    WIDTH, HEIGHT = 500, 300
+    alpha = 10
 
-    for i in range(30):
-        im = Image.new('RGB', (WIDTH, HEIGHT), (0, 0, 0))
-        draw = ImageDraw.Draw(im)
-        alpha = int(100)
-        draw.rectangle(xy=[(randrange(WIDTH), randrange(HEIGHT)), (100, 100)], fill=(alpha, alpha, alpha))
+    list_xy = list()
+    for _ in range(n_sample):
+        x = randrange(WIDTH)
+        y = randrange(HEIGHT)
+        cx = 100
+        cy = 100
+        list_xy.append((x, y, cx, cy, alpha))
 
-        result = ImageChops.add(src, im)
-
-    result.save('image.png', quality=95)
+    generateNormalizedPatchedImage(list_xy, WIDTH, HEIGHT, verbose=1)
