@@ -6,15 +6,17 @@ sys.path.insert(0, os.getcwd())
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
+import pytest
 from random import seed, random, randrange
 seed(123)
 
 from cv_util import generateNormalizedPatchedImage
 
-def test_image():
-    n_sample = 20
+@pytest.mark.parametrize("cmStr", ["jet", "spring", "plasma"])
+def test_image(cmStr):
+    n_sample = 255
     WIDTH, HEIGHT = 500, 300
-    alpha = 10
+    alpha = 1
 
     list_xy = list()
     for _ in range(n_sample):
@@ -24,4 +26,4 @@ def test_image():
         cy = 100
         list_xy.append((x, y, cx, cy, alpha))
 
-    generateNormalizedPatchedImage(list_xy, WIDTH, HEIGHT, verbose=1)
+    n, c = generateNormalizedPatchedImage(list_xy, WIDTH, HEIGHT, cmStr=cmStr, verbose=2)

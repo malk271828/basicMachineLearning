@@ -17,6 +17,8 @@ class landmarksExtractor(featureExtractor):
     DLIB_CENTER_INDEX = 30
     DLIB_UPPERLIP_INDEX = 62
     DLIB_LOWERLIP_INDEX = 66
+    DLIB_MOUTH_CORNER_RIGHT = 48
+    DLIB_MOUTH_CORNER_lEFT = 54
 
     def __init__(self,
                  shape_predictor:str,

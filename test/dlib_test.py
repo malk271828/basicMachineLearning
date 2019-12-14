@@ -30,7 +30,7 @@ def expFixture():
     class _expFixture:
         def __init__(self):
             fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
-            self.filePath = fileSelector.getFileList("visual")[:10]
+            self.filePath = fileSelector.getFileList("visual")[:1]
 
             # The following message indicates version mismatch between code and model.
             # RuntimeError: Unexpected version found while deserializing dlib::shape_predictor.
@@ -81,13 +81,36 @@ def test_lombardFileSelector():
     fileSelector.getFileList("audio", verbose=1)
     fileSelector.getFileList("visual", verbose=1)
 
+from keras import Sequential
+from keras.preprocessing.sequence import pad_sequences
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential,Model
+from keras.layers import LSTM, Dense, Bidirectional, Input,Dropout,BatchNormalization, CuDNNGRU, CuDNNLSTM
+def buildmodel():
+    model = Sequential()
+    model.add(BatchNormalization(input_shape=(10, 128)))
+    model.add(Bidirectional(LSTM(128, dropout=0.4, recurrent_dropout=0.4, activation='relu', return_sequences=True)))
+    model.add(Bidirectional(LSTM(64, return_sequences = True)))
+    model.add(Dense(1,activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    print(model.summary())
+    return model
+    
 def test_mouth_open(expFixture):
+    model = buildmodel()
     le = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
     be = batchExtractor(le)
     X = be.getX(filePathList=expFixture.filePath, verbose=2)
 
     upperLipY = pd.DataFrame([landmarks[le.DLIB_UPPERLIP_INDEX*2+1] for landmarks in X])
     lowerLipY = pd.DataFrame([landmarks[le.DLIB_LOWERLIP_INDEX*2+1] for landmarks in X])
+    mouthCornerR = pd.DataFrame([landmarks[le.DLIB_MOUTH_CORNER_RIGHT*2] for landmarks in X])
+    mouthCornerL = pd.DataFrame([landmarks[le.DLIB_MOUTH_CORNER_lEFT*2] for landmarks in X])
+
+    df = pd.concat([mouthCornerR, mouthCornerL, mouthCornerL - mouthCornerR], axis=1)
+    df.columns=["mouthCornerR", "mouthCornerL", "mouthWidth"]
+    df.plot()
+    plt.show()
 
     df = pd.concat([upperLipY, lowerLipY, lowerLipY - upperLipY], axis=1)
     df.columns=["upperLipY", "lowerLipY", "MouthOpenLength"]
