@@ -1,8 +1,9 @@
 import numpy as np
+from tqdm import tqdm
 
 # Image Processing
 from skimage.draw import rectangle
-from PIL import Image, ImageDraw, ImageChops
+from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 
 # Machine Learning Libraries
@@ -34,17 +35,21 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         https://stackoverflow.com/questions/24571492/stacking-line-drawing-for-float-images-in-pillow
     """
     VIS_DIR = "visualization/"
-    original_image = Image.new('L', (width, height), (0))
+    original_array = np.zeros(shape=(height, width), dtype=np.float)
     scaler = MinMaxScaler(feature_range=(0, 1))
     cm = plt.get_cmap(cmStr)
 
     for (x, y, cx, cy, alpha) in list_patch_xy:
-        im = Image.new('L', (width, height), (0))
-        draw = ImageDraw.Draw(im)
-        draw.rectangle(xy=[(x, y), (x+cx, y+cy)], fill=(alpha))
-        original_image = ImageChops.add(original_image, im)
+        # clipping
+        if x + cx >= height:
+            cx = height - x
+        if y + cy >= width:
+            cy = width - y
 
-    original_array = np.array(original_image)
+        # pointwise addition
+        rr, cc = rectangle(start=(x, y), extent=(cx, cy))
+        original_array[rr, cc] += alpha
+
     normalized_flatten_array = scaler.fit_transform(np.reshape(original_array, newshape=(-1, 1)))
     normalized_array = np.reshape(normalized_flatten_array, newshape=(height, width))
     colored_array = cm(normalized_array)
@@ -56,9 +61,9 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         print("[Colored] shape: {0} range:[{1}, {2}]".format(colored_array.shape, np.min(colored_array), np.max(colored_array)))
         if verbose > 1:
             normalized_image = Image.fromarray(normalized_array*255)
-            colored_image = Image.fromarray((colored_array[:,:,:]*255).astype(np.uint8))
+            colored_image = Image.fromarray((colored_array*255).astype(np.uint8))
 
-            original_image.save(VIS_DIR + 'original.png', quality=95)
+            Image.fromarray(original_array).convert("L").save(VIS_DIR + 'original.gif', quality=95)
             normalized_image.save(VIS_DIR + 'normalized.gif', quality=95)
             colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
             print("output to files")

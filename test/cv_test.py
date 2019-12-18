@@ -16,14 +16,14 @@ from cv_util import generateNormalizedPatchedImage
 def test_image(cmStr):
     n_sample = 255
     WIDTH, HEIGHT = 500, 300
-    alpha = 1
+    alpha = 0.01
 
     list_xy = list()
     for _ in range(n_sample):
-        x = randrange(WIDTH)
-        y = randrange(HEIGHT)
+        x = randrange(HEIGHT)
+        y = randrange(WIDTH)
         cx = 100
         cy = 100
         list_xy.append((x, y, cx, cy, alpha))
 
-    n, c = generateNormalizedPatchedImage(list_xy, WIDTH, HEIGHT, cmStr=cmStr, verbose=2)
+    n, c = generateNormalizedPatchedImage(list_xy, width=WIDTH, height=HEIGHT, cmStr=cmStr, verbose=2)
