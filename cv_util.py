@@ -1,13 +1,14 @@
 import numpy as np
 
 # Image Processing
+from skimage.draw import rectangle
 from PIL import Image, ImageDraw, ImageChops
 import matplotlib.pyplot as plt
 
 # Machine Learning Libraries
 from sklearn.preprocessing import MinMaxScaler
 
-def generateNormalizedPatchedImage(list_patch_xy:np.array,
+def generateNormalizedPatchedImage(list_patch_xy:list,
                                    width:int,
                                    height:int,
                                    cmStr:str = "jet",
@@ -15,6 +16,9 @@ def generateNormalizedPatchedImage(list_patch_xy:np.array,
     """
     Parameters
     ----------
+    list_patch_xy : list of (x, y, cx, cy, alpha)
+        specify locations of each patch
+
     verbose : control verbosity level, default=0
         Lv.1 - show statistics on standard output
         Lv.2 - output generated image to file
@@ -27,6 +31,7 @@ def generateNormalizedPatchedImage(list_patch_xy:np.array,
     ---------
         https://stackoverflow.com/questions/43457308/is-there-any-good-color-map-to-convert-gray-scale-image-to-colorful-ones-using-p
         https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
+        https://stackoverflow.com/questions/24571492/stacking-line-drawing-for-float-images-in-pillow
     """
     VIS_DIR = "visualization/"
     original_image = Image.new('L', (width, height), (0))
