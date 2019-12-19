@@ -9,6 +9,34 @@ import matplotlib.pyplot as plt
 # Machine Learning Libraries
 from sklearn.preprocessing import MinMaxScaler
 
+def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
+                                   shape:tuple,
+                                   cmStr:str = "jet",
+                                   verbose:int = 0):
+    data_max = 0
+    return_scaler = None
+    list_original_array = list()
+    list_grouped_normalized_array = list()
+
+    for list_patch_xy in list_grouped_patch_xy:
+        original_array, _, _, scaler = generateNormalizedPatchedImage(list_patch_xy, shape, cmStr, verbose)
+        if data_max < scaler.data_max_:
+            data_max = scaler.data_max_
+            return_scaler = scaler
+        list_original_array.append(original_array)
+
+    if verbose > 0:
+        print("")
+        print("number of groups: {0}".format(len(list_original_array)))
+        print("data_max: {0}".format(data_max))
+
+    for i, list_patch_xy in enumerate(list_grouped_patch_xy):
+        grouped_normalized_flatten_array = scaler.transform(np.reshape(list_original_array[i], newshape=(-1, 1)))
+        grouped_normalized_array = np.reshape(grouped_normalized_flatten_array, newshape=shape)
+        list_grouped_normalized_array.append(grouped_normalized_array)
+
+    return list_original_array, return_scaler
+
 def generateNormalizedPatchedImage(list_patch_xy:list,
                                    shape:tuple,
                                    cmStr:str = "jet",
@@ -73,4 +101,4 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
             colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
             print("output to files")
 
-    return normalized_array, colored_array, scaler
+    return original_array, normalized_array, colored_array, scaler
