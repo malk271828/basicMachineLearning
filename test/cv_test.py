@@ -26,4 +26,5 @@ def test_image(cmStr):
         cy = 100
         list_xy.append((x, y, cx, cy, alpha))
 
-    n, c = generateNormalizedPatchedImage(list_xy, shape=(WIDTH, HEIGHT), cmStr=cmStr, verbose=2)
+    n, c, scaler = generateNormalizedPatchedImage(list_xy, shape=(WIDTH, HEIGHT), cmStr=cmStr, verbose=2)
+    print(scaler.data_max_)

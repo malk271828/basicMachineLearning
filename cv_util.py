@@ -53,7 +53,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         rr, cc = rectangle(start=(x, y), extent=(cx, cy))
         original_array[rr, cc] += alpha
 
-    normalized_flatten_array = scaler.fit_transform(np.reshape(original_array, newshape=(-1, 1)))
+    scaler.fit(np.reshape(original_array, newshape=(-1, 1)))
+    normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
     normalized_array = np.reshape(normalized_flatten_array, newshape=(height, width))
     colored_array = cm(normalized_array)
 
@@ -72,4 +73,4 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
             colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
             print("output to files")
 
-    return normalized_array, colored_array
+    return normalized_array, colored_array, scaler
