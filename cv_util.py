@@ -10,15 +10,17 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
 def generateNormalizedPatchedImage(list_patch_xy:list,
-                                   width:int,
-                                   height:int,
+                                   shape:tuple,
                                    cmStr:str = "jet",
                                    verbose:int = 0):
     """
     Parameters
     ----------
+    shape : tuple of (width, height)
+        indicate size of image
     list_patch_xy : list of (x, y, cx, cy, alpha)
-        specify locations of each patch
+        specify locations of each patch.
+        The range of x and cx must be within [0, height], and y and cy [0, width]
 
     verbose : control verbosity level, default=0
         Lv.1 - show statistics on standard output
@@ -34,7 +36,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
         https://stackoverflow.com/questions/24571492/stacking-line-drawing-for-float-images-in-pillow
     """
-    VIS_DIR = "visualization/"
+    width = shape[0]
+    height = shape[1]
     original_array = np.zeros(shape=(height, width), dtype=np.float)
     scaler = MinMaxScaler(feature_range=(0, 1))
     cm = plt.get_cmap(cmStr)
@@ -60,6 +63,7 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         print("[Normalized] shape: {0} range:[{1}, {2}]".format(normalized_array.shape, np.min(normalized_array), np.max(normalized_array)))
         print("[Colored] shape: {0} range:[{1}, {2}]".format(colored_array.shape, np.min(colored_array), np.max(colored_array)))
         if verbose > 1:
+            VIS_DIR = "visualization/"
             normalized_image = Image.fromarray(normalized_array*255)
             colored_image = Image.fromarray((colored_array*255).astype(np.uint8))
 
