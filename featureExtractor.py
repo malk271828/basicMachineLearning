@@ -54,6 +54,15 @@ class featureExtractor():
     def _extractFeature(self,
                         fileName:str,
                         verbose:int = 0):
+        """
+        Parameters
+        ----------
+        fileName: file path to extract feature
+
+        Return
+        ------
+        Array of a feature extracted from single file
+        """
         raise NotImplemented
 
 class batchExtractor(featureExtractor):
