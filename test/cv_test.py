@@ -6,6 +6,9 @@ sys.path.insert(0, os.getcwd())
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
+from skimage import data, color
+from skimage.transform import rescale, resize, downscale_local_mean
+
 import pytest
 from random import seed, random, randrange
 seed(123)
@@ -31,10 +34,17 @@ def test_image(cmStr):
 
 @pytest.mark.parametrize("cmStr", ["jet"])
 def test_group(cmStr):
-    n_group = 2
+    """
+    Reference
+    ---------
+    https://scikit-image.org/docs/dev/auto_examples/transform/plot_rescale.html
+    """
+    n_group = 10
     n_sample = 255
-    WIDTH, HEIGHT = 500, 300
+    WIDTH, HEIGHT = 500, 500
     alpha = 0.01
+    image = data.logo()
+    VIS_DIR = "visualization/"
 
     list_grouped_xy = list()
     for _ in range(n_group):
@@ -47,4 +57,12 @@ def test_group(cmStr):
             list_xy.append((x, y, cx, cy, alpha))
         list_grouped_xy.append(list_xy)
 
-    generateNormalizedGroupedPatchedImage(list_grouped_xy, shape=(WIDTH, HEIGHT), cmStr=cmStr, verbose=2)
+    _, _, list_grouped_colored_array, _ = generateNormalizedGroupedPatchedImage(list_grouped_xy,
+                                                                                shape=(WIDTH, HEIGHT),
+                                                                                cmStr=cmStr,
+                                                                                verbose=2)
+
+    for i, colored_array in enumerate(list_grouped_colored_array):
+        overlayed_array = (colored_array*128 + image/2.0).astype(np.uint8)
+        overlayed_img = Image.fromarray(overlayed_array)
+        overlayed_img.save(VIS_DIR + "group{0}_".format(i)+cmStr+"_overlayed.bmp")

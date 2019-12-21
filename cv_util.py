@@ -1,5 +1,7 @@
 import numpy as np
 from tqdm import tqdm
+from colorama import *
+init()
 
 # Image Processing
 from skimage.draw import rectangle
@@ -17,8 +19,13 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
     return_scaler = None
     list_original_array = list()
     list_grouped_normalized_array = list()
+    list_grouped_colored_array = list()
+    cm = plt.get_cmap(cmStr)
 
-    for list_patch_xy in list_grouped_patch_xy:
+    for i, list_patch_xy in enumerate(list_grouped_patch_xy):
+        if verbose > 0:
+            print("--------------------")
+            print("group {0}:".format(i))
         original_array, _, _, scaler = generateNormalizedPatchedImage(list_patch_xy, shape, cmStr, verbose)
         if data_max < scaler.data_max_:
             data_max = scaler.data_max_
@@ -35,7 +42,11 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
         grouped_normalized_array = np.reshape(grouped_normalized_flatten_array, newshape=shape)
         list_grouped_normalized_array.append(grouped_normalized_array)
 
-    return list_original_array, return_scaler
+        # generate colored image
+        colored_array = cm(grouped_normalized_array)
+        list_grouped_colored_array.append(colored_array)
+
+    return list_original_array, list_grouped_normalized_array, list_grouped_colored_array, return_scaler
 
 def generateNormalizedPatchedImage(list_patch_xy:list,
                                    shape:tuple,
@@ -64,8 +75,7 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
         https://stackoverflow.com/questions/24571492/stacking-line-drawing-for-float-images-in-pillow
     """
-    width = shape[0]
-    height = shape[1]
+    width, height = shape
     original_array = np.zeros(shape=(height, width), dtype=np.float)
     scaler = MinMaxScaler(feature_range=(0, 1))
     cm = plt.get_cmap(cmStr)
@@ -87,10 +97,11 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     colored_array = cm(normalized_array)
 
     if verbose > 0:
-        print()
+        print(Fore.CYAN)
         print("[Original] shape: {0} range:[{1}, {2}]".format(original_array.shape, np.min(original_array), np.max(original_array)))
         print("[Normalized] shape: {0} range:[{1}, {2}]".format(normalized_array.shape, np.min(normalized_array), np.max(normalized_array)))
         print("[Colored] shape: {0} range:[{1}, {2}]".format(colored_array.shape, np.min(colored_array), np.max(colored_array)))
+        print(Style.RESET_ALL)
         if verbose > 1:
             VIS_DIR = "visualization/"
             normalized_image = Image.fromarray(normalized_array*255)
@@ -99,6 +110,6 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
             Image.fromarray(original_array).convert("L").save(VIS_DIR + 'original.gif', quality=95)
             normalized_image.save(VIS_DIR + 'normalized.gif', quality=95)
             colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
-            print("output to files")
+            print(Fore.MAGENTA + "output to files to {0}".format(VIS_DIR) + Style.RESET_ALL)
 
     return original_array, normalized_array, colored_array, scaler
