@@ -32,20 +32,21 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
             return_scaler = scaler
         list_original_array.append(original_array)
 
-    if verbose > 0:
-        print("")
-        print("number of groups: {0}".format(len(list_original_array)))
-        print("data_max: {0}".format(data_max))
-
     # calculate inter-group maximum scaling factor
-    for i, list_patch_xy in enumerate(list_grouped_patch_xy):
-        grouped_normalized_flatten_array = scaler.transform(np.reshape(list_original_array[i], newshape=(-1, 1)))
+    for original_array, list_patch_xy in zip(list_original_array, list_grouped_patch_xy):
+        grouped_normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
         grouped_normalized_array = np.reshape(grouped_normalized_flatten_array, newshape=shape)
         list_grouped_normalized_array.append(grouped_normalized_array)
 
         # generate colored image
         colored_array = cm(grouped_normalized_array)
         list_grouped_colored_array.append(colored_array)
+
+    if verbose > 0:
+        print("")
+        print("number of groups: {0}".format(len(list_original_array)))
+        print("data_max: {0}".format(data_max))
+        print("[Grouped] range:[{0}, {1}]".format(np.min(list_grouped_colored_array), np.max(list_grouped_colored_array)))
 
     return list_original_array, list_grouped_normalized_array, list_grouped_colored_array, return_scaler
 
