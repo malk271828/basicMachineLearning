@@ -37,6 +37,7 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
         print("number of groups: {0}".format(len(list_original_array)))
         print("data_max: {0}".format(data_max))
 
+    # calculate inter-group maximum scaling factor
     for i, list_patch_xy in enumerate(list_grouped_patch_xy):
         grouped_normalized_flatten_array = scaler.transform(np.reshape(list_original_array[i], newshape=(-1, 1)))
         grouped_normalized_array = np.reshape(grouped_normalized_flatten_array, newshape=shape)
@@ -55,12 +56,14 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     """
     Parameters
     ----------
-    shape : tuple of (width, height)
-        indicate size of image
     list_patch_xy : list of (x, y, cx, cy, alpha)
         specify locations of each patch.
         The range of x and cx must be within [0, height], and y and cy [0, width]
-
+    shape : tuple of (width, height)
+        indicate size of image
+    cmStr : string indicating color-map
+        available color-maps will be displayed in the following link:
+        https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
     verbose : control verbosity level, default=0
         Lv.1 - show statistics on standard output
         Lv.2 - output generated image to file
@@ -72,7 +75,6 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     Reference
     ---------
         https://stackoverflow.com/questions/43457308/is-there-any-good-color-map-to-convert-gray-scale-image-to-colorful-ones-using-p
-        https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
         https://stackoverflow.com/questions/24571492/stacking-line-drawing-for-float-images-in-pillow
     """
     width, height = shape

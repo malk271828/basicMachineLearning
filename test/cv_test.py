@@ -32,7 +32,7 @@ def test_image(cmStr):
     o, n, c, scaler = generateNormalizedPatchedImage(list_xy, shape=(WIDTH, HEIGHT), cmStr=cmStr, verbose=2)
     print(scaler.data_max_)
 
-@pytest.mark.parametrize("cmStr", ["jet"])
+@pytest.mark.parametrize("cmStr", ["jet", "plasma"])
 def test_group(cmStr):
     """
     Reference
@@ -50,10 +50,8 @@ def test_group(cmStr):
     for _ in range(n_group):
         list_xy = list()
         for _ in range(n_sample):
-            x = randrange(HEIGHT)
-            y = randrange(WIDTH)
-            cx = 100
-            cy = 100
+            x, y = randrange(HEIGHT), randrange(WIDTH)
+            cx, cy = randrange(HEIGHT), randrange(WIDTH)
             list_xy.append((x, y, cx, cy, alpha))
         list_grouped_xy.append(list_xy)
 
