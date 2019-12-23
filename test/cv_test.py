@@ -6,6 +6,7 @@ sys.path.insert(0, os.getcwd())
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
+import cv2
 from skimage import data, color
 from skimage.transform import rescale, resize, downscale_local_mean
 
@@ -41,9 +42,10 @@ def test_group(cmStr):
     """
     n_group = 10
     n_sample = 255
-    WIDTH, HEIGHT = 500, 500
     alpha = 0.01
-    image = data.logo()
+    image = data.chelsea()
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2RGBA)
+    WIDTH, HEIGHT = image.shape[:2]
     VIS_DIR = "visualization/"
 
     list_grouped_xy = list()
