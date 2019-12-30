@@ -11,12 +11,16 @@ sys.path.insert(0, "../ssd_keras")
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
+# Image Processing
+from imageio import imread
+import numpy as np
+from skimage.draw import rectangle_perimeter
+
+# Machine Learning 
 from keras import backend as K
 from keras.models import load_model
 from keras.preprocessing import image
 from keras.optimizers import Adam
-from imageio import imread
-import numpy as np
 
 # visualization
 import matplotlib
@@ -63,7 +67,7 @@ IMG_DIR = "examples/"
 img_paths = [IMG_DIR + "fish_bike.jpg",
              IMG_DIR + "cat_and_dog.jpg",
              IMG_DIR + "diningTbl.jpg"]
-entry = 2
+entry = 0
 
 for img_path in img_paths:
     orig_images.append(imread(img_path))
@@ -113,37 +117,45 @@ def transformCordinate(box, orgImage, img_width, img_height):
 
 for idx_image, orig_image in enumerate(orig_images[entry:entry+1]):
     list_patch = list()
-    list_predict = list()
+    list_predicted_box = list()
     for target, class_name in enumerate(classes):
         list_target_patch = list()
-        # plt.figure(figsize=(20,12))
-        # plt.imshow(orig_images[0])
-        # current_axis = plt.gca()
 
+        # create confidence map
         for box in y_pred_thresh[0]:
             # Transform the predicted bounding boxes for the 300x300 image to the original image dimensions.
             xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, img_width, img_height)
             if box[0] == target:
-                # current_axis.add_patch(plt.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, color=color, fill=False, linewidth=2))  
-                # current_axis.text(xmin, ymin, label, size='x-large', color='white', bbox={'facecolor':color, 'alpha':1.0})
                 list_target_patch.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]))
-            # plt.save(VIS_DIR + "{0}".format(class_name)+"_unicolor.png")
-            # plt.clf()
-
         list_patch.append(list_target_patch)
+
+        # create predicted result
+        for box in y_pred_original_thresh[0]:
+            xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, img_width, img_height)
+            if box[0] == target:
+                color = colors[int(box[0])]
+                label = '{}: {:.2f}'.format(classes[int(box[0])], box[1])
+                list_predicted_box.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
     _, _, list_grouped_colored_array, _ = generateNormalizedGroupedPatchedImage(list_patch, 
                                                                                 shape=(orig_image.shape[1], orig_image.shape[0]),
                                                                                 verbose=2)
-                # color = colors[int(box[0])]
-                # label = '{}: {:.2f}'.format(classes[int(box[0])], box[1])
 
     for target, colored_array in enumerate(list_grouped_colored_array):
         # create output image
         class_name = classes[target]
         colored_array = np.reshape(colored_array[:,:,:3], newshape=(orig_image.shape[0], orig_image.shape[1], 3))
         overlayed_array = (colored_array[:,:,:3]*128+orig_image/2.0).astype(np.uint8)
+        for predicted_box in list_predicted_box:
+            if predicted_box[5] == target:
+                rr, cc = rectangle_perimeter(start=(predicted_box[0], predicted_box[1]),
+                                             extent=(predicted_box[2], predicted_box[3]),
+                                             shape=(orig_image.shape[0], orig_image.shape[1]))
+                overlayed_array[rr, cc] = 255
         overlayed_img = Image.fromarray(overlayed_array)
+        for predicted_box in list_predicted_box:
+            if target == predicted_box[5]:
+                ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
         # create output path and directory
         output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_paths[entry]))[0] + "_" + cmStr
