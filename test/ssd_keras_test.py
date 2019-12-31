@@ -18,7 +18,7 @@ from skimage.draw import rectangle_perimeter
 
 # Machine Learning 
 from keras import backend as K
-from keras.models import load_model
+from keras.models import load_model, Model
 from keras.preprocessing import image
 from keras.optimizers import Adam
 
@@ -44,12 +44,7 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 from cv_util import *
 
 def test_inference():
-    # Set the image size.
-    img_height = 300
-    img_width = 300
-
-
-    # TODO: Set the path to the `.h5` file of the model to be loaded.
+    # Set the path to the `.h5` file of the model to be loaded.
     model_path = 'ssd300_pascal_07+12_102k_steps.h5'
     # We need to create an SSDLoss object in order to pass that to the model loader.
     ssd_loss = SSDLoss(neg_pos_ratio=3, n_neg_min=0, alpha=1.0)
@@ -59,6 +54,11 @@ def test_inference():
                                                 'DecodeDetections': DecodeDetections,
                                                 'compute_loss': ssd_loss.compute_loss})
 
+    target_layer_name = "conv4_3_norm_mbox_conf_reshape"
+    hidden_layer_model = Model(inputs=model.input, outputs=model.get_layer(target_layer_name).output)
+    # TODO: get each shape of layers from loaded pretrained model
+    layer_shape = [(300, 300), (38, 38)]
+    target_layer = 1
 
     orig_images = [] # Store the images here.
     input_images = [] # Store resized versions of the images here.
@@ -73,21 +73,39 @@ def test_inference():
 
     for img_path in img_files:
         orig_images.append(imread(IMG_DIR + img_path))
-    img = image.load_img(IMG_DIR + img_files[entry], target_size=(img_height, img_width))
+    img = image.load_img(IMG_DIR + img_files[entry], target_size=(layer_shape[0][0], layer_shape[0][1]))
     img = image.img_to_array(img) 
     input_images.append(img)
     input_images = np.array(input_images)
 
-    y_pred = model.predict(input_images)
-    y_pred_original = np.array(decode_detections(y_pred, confidence_thresh=0.1, iou_threshold=0.4, top_k=200,
-                                                    img_height=img.shape[0], img_width=img.shape[1]))
-    y_pred = np.array(decode_detections(y_pred, confidence_thresh=0.0001, iou_threshold=0.999, top_k=8732,
-                                                    img_height=img.shape[0], img_width=img.shape[1]))
+    #--------------------------------------------------------------------------
+    # Inference & Decode
+    #--------------------------------------------------------------------------
+    y_pred_encoded = list(map(lambda m: m.predict(input_images), [model, hidden_layer_model]))
+    decode_param_original = {
+        "confidence_thresh" : 0.1,
+        "iou_threshold" : 0.4,
+        "top_k" : 200,
+        "img_height" : img.shape[0],
+        "img_width" : img.shape[1]
+    }
+    decode_param = {
+        "confidence_thresh" : 0.0001,
+        "iou_threshold" : 0.999,
+        "top_k" : 8732,
+        "img_height" : img.shape[0],
+        "img_width" : img.shape[1]
+    }
+    y_pred_original = np.array(decode_detections(y_pred_encoded[0], **decode_param_original))
+    list_y_pred = list(map(lambda y: np.array(decode_detections(y, **decode_param)), y_pred_encoded))
 
-    confidence_threshold = 0.00
+    #--------------------------------------------------------------------------
+    # Filtering
+    #--------------------------------------------------------------------------
     confidence_threshold_original = 0.4
+    confidence_threshold = 0.00
 
-    y_pred_thresh = [y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])]
+    y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][target_layer]
     y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
 
     np.set_printoptions(precision=2, suppress=True, linewidth=90)
@@ -125,14 +143,14 @@ def test_inference():
             list_target_patch = list()
             for box in y_pred_thresh[0]:
                 # Transform the predicted bounding boxes for the 300x300 image to the original image dimensions.
-                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, img_width, img_height)
+                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[target_layer][0], layer_shape[target_layer][1])
                 if box[0] == target:
                     list_target_patch.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]))
             list_patch.append(list_target_patch)
 
             # create predicted result
             for box in y_pred_original_thresh[0]:
-                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, img_width, img_height)
+                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[target_layer][0], layer_shape[target_layer][1])
                 if box[0] == target:
                     color = colors[int(box[0])]
                     list_predicted_box.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
