@@ -63,6 +63,9 @@ def test_group(cmStr):
                                                                                 verbose=2)
 
     for i, colored_array in enumerate(list_grouped_colored_array):
+        colored_array = np.reshape(colored_array, newshape=(-1, HEIGHT, 4))
         overlayed_array = (colored_array*128 + image/2.0).astype(np.uint8)
         overlayed_img = Image.fromarray(overlayed_array)
         overlayed_img.save(VIS_DIR + "group{0}_".format(i)+cmStr+"_overlayed.bmp")
+
+    Image.fromarray((np.reshape(colored_array*128, (HEIGHT, WIDTH, 4))).astype(np.uint8)).save("colored_array.png")

@@ -44,6 +44,10 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 from cv_util import *
 
 def test_inference():
+    #--------------------------------------------------------------------------
+    # Load trained model
+    #--------------------------------------------------------------------------
+
     # Set the path to the `.h5` file of the model to be loaded.
     model_path = 'ssd300_pascal_07+12_102k_steps.h5'
     # We need to create an SSDLoss object in order to pass that to the model loader.
@@ -56,10 +60,12 @@ def test_inference():
 
     target_layer_name = "conv4_3_norm_mbox_conf_reshape"
     hidden_layer_model = Model(inputs=model.input, outputs=model.get_layer(target_layer_name).output)
-    # TODO: get each shape of layers from loaded pretrained model
-    layer_shape = [(300, 300), (38, 38)]
-    target_layer = 1
+    layer_shape = [model.input_shape[1:3], model.get_layer(target_layer_name).input_shape[1:3]]
+    target_layer = 0
 
+    #--------------------------------------------------------------------------
+    # load test images
+    #--------------------------------------------------------------------------
     orig_images = [] # Store the images here.
     input_images = [] # Store resized versions of the images here.
 
