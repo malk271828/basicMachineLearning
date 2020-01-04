@@ -45,10 +45,10 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 # original header
 from cv_util import *
 
-@pytest.mark.parametrize("target_layer_names", [["conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
+@pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
 @pytest.mark.parametrize("entry", [2])
-@pytest.mark.parametrize("target_layer", [6])
+@pytest.mark.parametrize("target_layer", [0])
 def test_inference(entry, target_layer_names, target_layer):
     verbose = 1
     #--------------------------------------------------------------------------
@@ -67,16 +67,15 @@ def test_inference(entry, target_layer_names, target_layer):
 
     hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
     layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
-    outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names]
+    outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
     boxIndexPair = [(0, sum(outDBoxNums))] + [(sum(outDBoxNums[:i]), sum(outDBoxNums[:i+1])) for i in range(len(outDBoxNums))]
-    layer_shape = [(300, 300)] + layer_shape
 
     if verbose > 0:
-        #print("target layer name: {0}".format(target_layer_names[target_layer]))
-        print(layer_shape)
-        print(boxIndexPair)
-        print(boxIndexPair[target_layer])
-        
+        print(Fore.GREEN + "target layer name: {0}".format(target_layer_names[target_layer]))
+        print("layer_shape: {0}".format(layer_shape))
+        print("boxIndexPair: {0}".format(boxIndexPair))
+        print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
+
     #--------------------------------------------------------------------------
     # load test images
     #--------------------------------------------------------------------------
