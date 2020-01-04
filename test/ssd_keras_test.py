@@ -10,6 +10,7 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, "../ssd_keras")
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
+import pytest
 
 # Image Processing
 from imageio import imread
@@ -21,6 +22,7 @@ from keras import backend as K
 from keras.models import load_model, Model
 from keras.preprocessing import image
 from keras.optimizers import Adam
+from keras.utils import plot_model
 
 # visualization
 import matplotlib
@@ -43,7 +45,12 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 # original header
 from cv_util import *
 
-def test_inference():
+@pytest.mark.parametrize("target_layer_names", [["conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
+                        "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
+@pytest.mark.parametrize("entry", [2])
+@pytest.mark.parametrize("target_layer", [6])
+def test_inference(entry, target_layer_names, target_layer):
+    verbose = 1
     #--------------------------------------------------------------------------
     # Load trained model
     #--------------------------------------------------------------------------
@@ -58,11 +65,18 @@ def test_inference():
                                                 'DecodeDetections': DecodeDetections,
                                                 'compute_loss': ssd_loss.compute_loss})
 
-    target_layer_name = "conv4_3_norm_mbox_conf_reshape"
-    hidden_layer_model = Model(inputs=model.input, outputs=model.get_layer(target_layer_name).output)
-    layer_shape = [model.input_shape[1:3], model.get_layer(target_layer_name).input_shape[1:3]]
-    target_layer = 0
+    hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
+    layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
+    outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names]
+    boxIndexPair = [(0, sum(outDBoxNums))] + [(sum(outDBoxNums[:i]), sum(outDBoxNums[:i+1])) for i in range(len(outDBoxNums))]
+    layer_shape = [(300, 300)] + layer_shape
 
+    if verbose > 0:
+        #print("target layer name: {0}".format(target_layer_names[target_layer]))
+        print(layer_shape)
+        print(boxIndexPair)
+        print(boxIndexPair[target_layer])
+        
     #--------------------------------------------------------------------------
     # load test images
     #--------------------------------------------------------------------------
@@ -75,11 +89,10 @@ def test_inference():
                 "cat_and_dog.jpg",
                 "diningTbl.jpg",
                 "cow_and_horse.jpg"]
-    entry = 3
 
     for img_path in img_files:
         orig_images.append(imread(IMG_DIR + img_path))
-    img = image.load_img(IMG_DIR + img_files[entry], target_size=(layer_shape[0][0], layer_shape[0][1]))
+    img = image.load_img(IMG_DIR + img_files[entry], target_size=(model.get_layer("input_1").input_shape[1:3]))
     img = image.img_to_array(img) 
     input_images.append(img)
     input_images = np.array(input_images)
@@ -87,7 +100,8 @@ def test_inference():
     #--------------------------------------------------------------------------
     # Inference & Decode
     #--------------------------------------------------------------------------
-    y_pred_encoded = list(map(lambda m: m.predict(input_images), [model, hidden_layer_model]))
+    models = [model]
+    y_pred_encoded = list(map(lambda m: m.predict(input_images), models))
     decode_param_original = {
         "confidence_thresh" : 0.1,
         "iou_threshold" : 0.4,
@@ -111,7 +125,7 @@ def test_inference():
     confidence_threshold_original = 0.4
     confidence_threshold = 0.00
 
-    y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][target_layer]
+    y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
     y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
 
     np.set_printoptions(precision=2, suppress=True, linewidth=90)
@@ -132,6 +146,7 @@ def test_inference():
             'chair', 'cow', 'diningtable', 'dog',
             'horse', 'motorbike', 'person', 'pottedplant',
             'sheep', 'sofa', 'train', 'tvmonitor']
+    plot_model(model, to_file=VIS_DIR + os.path.basename(model_path) + ".png", show_shapes=True, show_layer_names=True)
 
     def transformCordinate(box, orgImage, img_width, img_height):
         xmin = box[2] * orgImage.shape[1] / img_width
@@ -147,23 +162,23 @@ def test_inference():
         for target, class_name in enumerate(classes):
             # create confidence map
             list_target_patch = list()
-            for box in y_pred_thresh[0]:
+            for box in y_pred_thresh[0][boxIndexPair[target_layer][0]:boxIndexPair[target_layer][1]]:
                 # Transform the predicted bounding boxes for the 300x300 image to the original image dimensions.
-                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[target_layer][0], layer_shape[target_layer][1])
+                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
                 if box[0] == target:
                     list_target_patch.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]))
             list_patch.append(list_target_patch)
 
             # create predicted result
             for box in y_pred_original_thresh[0]:
-                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[target_layer][0], layer_shape[target_layer][1])
+                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
                 if box[0] == target:
                     color = colors[int(box[0])]
                     list_predicted_box.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
-        _, _, list_grouped_colored_array, _ = generateNormalizedGroupedPatchedImage(list_patch,
+        _, _, list_grouped_colored_array, scaler = generateNormalizedGroupedPatchedImage(list_patch,
                                                                                     shape=(orig_image.shape[1], orig_image.shape[0]),
-                                                                                    verbose=0)
+                                                                                    verbose=verbose)
 
         for target, colored_array in enumerate(list_grouped_colored_array):
             # create output image
