@@ -45,18 +45,17 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 # original header
 from cv_util import *
 
+@pytest.mark.parametrize("model_path", ['ssd300_pascal_07+12_102k_steps.h5'])
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
-@pytest.mark.parametrize("entry", [2])
-@pytest.mark.parametrize("target_layer", [0])
-def test_inference(entry, target_layer_names, target_layer):
+@pytest.mark.parametrize("entry", [0, 1])
+@pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
+def test_inference(entry, model_path, target_layer_names, target_layer):
     verbose = 1
     #--------------------------------------------------------------------------
     # Load trained model
     #--------------------------------------------------------------------------
 
-    # Set the path to the `.h5` file of the model to be loaded.
-    model_path = 'ssd300_pascal_07+12_102k_steps.h5'
     # We need to create an SSDLoss object in order to pass that to the model loader.
     ssd_loss = SSDLoss(neg_pos_ratio=3, n_neg_min=0, alpha=1.0)
     K.clear_session() # Clear previous models from memory.
@@ -196,11 +195,12 @@ def test_inference(entry, target_layer_names, target_layer):
                     ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
             # create output path and directory
-            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_files[entry]))[0] + "_" + cmStr
+            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_files[entry]))[0] + "_" + cmStr + "/" + target_layer_names[target_layer]
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
                 print("create dir:{0}".format(output_dir))
             overlayed_img.save(output_dir + "/group{0}_{1}_".format(target, class_name)+cmStr+"_overlayed.bmp")
 
-            # verbose standard output
-            
+        # output statistics
+        with open(os.path.dirname(output_dir) + "/stat.txt", mode="a") as fd:
+            fd.write("{0}:{1}".format(target_layer_names[target_layer], str(scaler.data_max_)))
