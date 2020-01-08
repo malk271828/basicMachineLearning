@@ -87,6 +87,12 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
                 "cat_and_dog.jpg",
                 "diningTbl.jpg",
                 "cow_and_horse.jpg"]
+    classes = ['background',
+            'aeroplane', 'bicycle', 'bird', 'boat',
+            'bottle', 'bus', 'car', 'cat',
+            'chair', 'cow', 'diningtable', 'dog',
+            'horse', 'motorbike', 'person', 'pottedplant',
+            'sheep', 'sofa', 'train', 'tvmonitor']
 
     for img_path in img_files:
         orig_images.append(imread(IMG_DIR + img_path))
@@ -108,14 +114,14 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
         "img_width" : img.shape[1]
     }
     decode_param = {
-        "confidence_thresh" : 0.0001,
-        "iou_threshold" : 0.999,
-        "top_k" : 8732,
+        "confidence_thresh" : 0.0000,
+        "iou_threshold" : 1.000,
+        "top_k" : 8732*len(classes),
         "img_height" : img.shape[0],
         "img_width" : img.shape[1]
     }
     y_pred_original = np.array(decode_detections(y_pred_encoded[0], **decode_param_original))
-    list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,boxIndexPair[target_layer][0]:boxIndexPair[target_layer][1],:], **decode_param)), y_pred_encoded))
+    list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,slice(*boxIndexPair[target_layer]),:], **decode_param)), y_pred_encoded))
 
     #--------------------------------------------------------------------------
     # Filtering
@@ -138,12 +144,6 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
     VIS_DIR = "visualization/"
     cmStr = "jet"
     colors = plt.cm.hsv(np.linspace(0, 1, 21)).tolist()
-    classes = ['background',
-            'aeroplane', 'bicycle', 'bird', 'boat',
-            'bottle', 'bus', 'car', 'cat',
-            'chair', 'cow', 'diningtable', 'dog',
-            'horse', 'motorbike', 'person', 'pottedplant',
-            'sheep', 'sofa', 'train', 'tvmonitor']
     plot_model(model, to_file=VIS_DIR + os.path.basename(model_path) + ".png", show_shapes=True, show_layer_names=True)
 
     def transformCordinate(box, orgImage, img_width, img_height):
