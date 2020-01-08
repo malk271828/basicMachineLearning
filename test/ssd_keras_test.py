@@ -115,7 +115,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
         "img_width" : img.shape[1]
     }
     y_pred_original = np.array(decode_detections(y_pred_encoded[0], **decode_param_original))
-    list_y_pred = list(map(lambda y: np.array(decode_detections(y, **decode_param)), y_pred_encoded))
+    list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,boxIndexPair[target_layer][0]:boxIndexPair[target_layer][1],:], **decode_param)), y_pred_encoded))
 
     #--------------------------------------------------------------------------
     # Filtering
@@ -160,7 +160,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
         for target, class_name in enumerate(classes):
             # create confidence map
             list_target_patch = list()
-            for box in y_pred_thresh[0][boxIndexPair[target_layer][0]:boxIndexPair[target_layer][1]]:
+            for box in y_pred_thresh[0]:
                 # Transform the predicted bounding boxes for the 300x300 image to the original image dimensions.
                 xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
                 if box[0] == target:
