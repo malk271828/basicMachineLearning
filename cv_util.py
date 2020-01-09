@@ -1,3 +1,4 @@
+from operator import itemgetter, attrgetter
 import numpy as np
 from tqdm import tqdm
 from colorama import *
@@ -83,12 +84,12 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     scaler = MinMaxScaler(feature_range=(0, 1))
     cm = plt.get_cmap(cmStr)
 
-    for (x, y, cx, cy, alpha) in list_patch_xy:
+    for (x, y, cx, cy, alpha) in sorted(list_patch_xy, key=itemgetter(4)):
         # clipping
         if x + cx >= height:
-            cx = height - x
+            cx = height - x - 1
         if y + cy >= width:
-            cy = width - y
+            cy = width - y - 1
 
         # pointwise addition
         rr, cc = rectangle(start=(x, y), extent=(cx, cy))
