@@ -1,4 +1,5 @@
 from operator import itemgetter, attrgetter
+from joblib import Parallel, delayed
 import numpy as np
 from tqdm import tqdm
 from colorama import *
@@ -54,7 +55,8 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
 def generateNormalizedPatchedImage(list_patch_xy:list,
                                    shape:tuple,
                                    cmStr:str = "jet",
-                                   verbose:int = 0):
+                                   verbose:int = 0,
+                                   n_jobs:int = 1):
     """
     Parameters
     ----------
@@ -84,7 +86,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     scaler = MinMaxScaler(feature_range=(0, 1))
     cm = plt.get_cmap(cmStr)
 
-    for (x, y, cx, cy, alpha) in sorted(list_patch_xy, key=itemgetter(4)):
+    def _processPatch(patch:tuple):
+        x, y, cx, cy, alpha = patch
         # clipping
         if x + cx >= height:
             cx = height - x - 1
@@ -94,6 +97,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         # pointwise addition
         rr, cc = rectangle(start=(x, y), extent=(cx, cy))
         original_array[rr, cc] += alpha
+
+    Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processPatch)(patch) for patch in sorted(list_patch_xy, key=itemgetter(4))] )
 
     scaler.fit(np.reshape(original_array, newshape=(-1, 1)))
     normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
