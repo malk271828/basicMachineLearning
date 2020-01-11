@@ -18,6 +18,9 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
                                    n_jobs:int = 2):
+    # note:
+    # To access shared variables from an inter function to be paralleled,
+    # it should be declared as list or numpy array
     data_max = np.array([0], dtype=np.float32)
     return_scaler = np.array([None], dtype=object)
     list_original_array = list()
@@ -74,6 +77,7 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     verbose : control verbosity level, default=0
         Lv.1 - show statistics on standard output
         Lv.2 - output generated image to file
+    n_jobs : number of thread for multiprocessing parallerism, default=1
 
     Return
     ------
@@ -101,7 +105,7 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         rr, cc = rectangle(start=(x, y), extent=(cx, cy))
         original_array[rr, cc] += alpha
 
-    Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processPatch)(patch) for patch in sorted(list_patch_xy, key=itemgetter(4))] )
+    Parallel(n_jobs=n_jobs, require='sharedmem')([delayed(_processPatch)(patch) for patch in sorted(list_patch_xy, key=itemgetter(4))])
 
     scaler.fit(np.reshape(original_array, newshape=(-1, 1)))
     normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
