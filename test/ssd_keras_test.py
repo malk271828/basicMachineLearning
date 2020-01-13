@@ -50,7 +50,8 @@ from cv_util import *
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
 @pytest.mark.parametrize("entry", [0, 1])
 @pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
-def test_inference(entry, model_path, target_layer_names, target_layer):
+@pytest.mark.parametrize("mode", ["overwrite"])
+def test_inference(entry, model_path, target_layer_names, target_layer, mode):
     verbose = 1
     #--------------------------------------------------------------------------
     # Load trained model
@@ -84,6 +85,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
     # We'll only load one image in this example.
     IMG_DIR = "examples/"
     img_files = ["fish_bike.jpg",
+                "husky.jpg",
                 "cat_and_dog.jpg",
                 "diningTbl.jpg",
                 "cow_and_horse.jpg"]
@@ -176,6 +178,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
 
         _, _, list_grouped_colored_array, scaler = generateNormalizedGroupedPatchedImage(list_patch,
                                                                                     shape=(orig_image.shape[1], orig_image.shape[0]),
+                                                                                    mode=mode,
                                                                                     verbose=verbose)
 
         for target, colored_array in enumerate(list_grouped_colored_array):
@@ -202,5 +205,8 @@ def test_inference(entry, model_path, target_layer_names, target_layer):
             overlayed_img.save(output_dir + "/group{0}_{1}_".format(target, class_name)+cmStr+"_overlayed.bmp")
 
         # output statistics
-        with open(os.path.dirname(output_dir) + "/stat.txt", mode="a") as fd:
-            fd.write("{0}:{1}".format(target_layer_names[target_layer], str(scaler.data_max_)))
+        try:
+            with open(os.path.dirname(output_dir) + "/stat.txt", mode="a") as fd:
+                fd.write("{0}:{1}".format(target_layer_names[target_layer], str(scaler.data_max_)))
+        except AttributeError:
+            pass

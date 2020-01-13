@@ -92,7 +92,9 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
 
     Return
     ------
-    tuple of array of normalized image and color-map image
+    tuple of array of (original image, normalized image, color-map image, scaler)
+    The last scaler which have the highest data_max_ value will be chosen, and
+    when mode is "add", scaler is always None.
 
     Reference
     ---------
