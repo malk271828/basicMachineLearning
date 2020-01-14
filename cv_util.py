@@ -18,7 +18,7 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
                                    mode:str,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
-                                   n_jobs:int = 2):
+                                   n_jobs:int = 1):
     # note:
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
@@ -112,6 +112,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
             cx = height - x - 1
         if y + cy >= width:
             cy = width - y - 1
+        if cx <= 0 or cy <= 0:
+            return
 
         # pointwise addition
         rr, cc = rectangle(start=(x, y), extent=(cx, cy))

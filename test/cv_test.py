@@ -22,7 +22,8 @@ seed(123)
 from cv_util import *
 
 @pytest.mark.parametrize("cmStr", ["jet", "spring", "copper"])
-def test_image(cmStr):
+@pytest.mark.parametrize("mode", ["add", "overwrite"])
+def test_image(cmStr, mode):
     n_sample = 255
     WIDTH, HEIGHT = 500, 300
     alpha = 0.01
@@ -35,8 +36,9 @@ def test_image(cmStr):
         cy = 100
         list_xy.append((x, y, cx, cy, alpha))
 
-    o, n, c, scaler = generateNormalizedPatchedImage(list_xy, shape=(WIDTH, HEIGHT), mode="add", cmStr=cmStr, verbose=2)
-    print(scaler.data_max_)
+    o, n, c, scaler = generateNormalizedPatchedImage(list_xy, shape=(WIDTH, HEIGHT), mode=mode, cmStr=cmStr, verbose=2)
+    if scaler != None:
+        print(scaler.data_max_)
 
 @pytest.mark.parametrize("cmStr", ["jet", "copper"])
 def test_group(cmStr):
