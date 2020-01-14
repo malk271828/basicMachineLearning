@@ -35,62 +35,68 @@ class landmarksExtractor(featureExtractor):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(shape_predictor)
 
-    def _extractFeature(self, fileName, verbose=0):
-        if isinstance(fileName, str):
-            cap = cv2.VideoCapture(fileName)
-        else:
-            cap = cv2.VideoCapture(0)
+    def _extractFeature(self,
+                        fileName:str,
+                        verbose:int = 0,
+                        **kwargs):
+        if kwargs["modal"] == "video":
+            if isinstance(fileName, str):
+                cap = cv2.VideoCapture(fileName)
+            else:
+                cap = cv2.VideoCapture(0)
 
-        # Check if camera opened successfully
-        if (cap.isOpened()== False): 
-            print("Error opening video stream or file")
+            # Check if camera opened successfully
+            if (cap.isOpened()== False):
+                print("Error opening video stream or file")
 
-        landmarks_list = list()
-        idx_frame = 0
-        # Read until video is completed
-        while(cap.isOpened()):
-            # Capture frame-by-frame
-            ret, frame = cap.read()
-            if ret:
-                # Converting the image to gray scale
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                rects = self.detector(gray, 0)
+            landmarks_list = list()
+            idx_frame = 0
+            # Read until video is completed
+            while(cap.isOpened()):
+                # Capture frame-by-frame
+                ret, frame = cap.read()
+                if ret:
+                    # Converting the image to gray scale
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    rects = self.detector(gray, 0)
 
-                # For each detected face, find the landmark.
-                for (i, rect) in enumerate(rects):
-                    # Make the prediction and transfom it to numpy array
-                    landmarks = self.predictor(gray, rect)
-                    landmarks = face_utils.shape_to_np(landmarks)
-                    landmarks_list.append(landmarks - landmarks[self.DLIB_CENTER_INDEX])
+                    # For each detected face, find the landmark.
+                    for (i, rect) in enumerate(rects):
+                        # Make the prediction and transfom it to numpy array
+                        landmarks = self.predictor(gray, rect)
+                        landmarks = face_utils.shape_to_np(landmarks)
+                        landmarks_list.append(landmarks - landmarks[self.DLIB_CENTER_INDEX])
 
-                    # Draw on our image, all the finded cordinate points (x,y)
-                    if verbose > 0:
-                        for (i, (x, y)) in enumerate(landmarks):
-                            if i == self.DLIB_CENTER_INDEX:
-                                cv2.circle(frame, (x, y), 2, (255, 0, 0), -1)
-                            else:
-                                cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+                        # Draw on our image, all the finded cordinate points (x,y)
+                        if verbose > 0:
+                            for (i, (x, y)) in enumerate(landmarks):
+                                if i == self.DLIB_CENTER_INDEX:
+                                    cv2.circle(frame, (x, y), 2, (255, 0, 0), -1)
+                                else:
+                                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-                if verbose > 1:
-                    if self.visualize_window:
-                        # Show the image
-                        cv2.imshow("Output", frame)
-                    else:
-                        cv2.imwrite(self.cache_dir + "{0:03}.png".format(idx_frame), frame)
-                        idx_frame += 1
+                    if verbose > 1:
+                        if self.visualize_window:
+                            # Show the image
+                            cv2.imshow("Output", frame)
+                        else:
+                            cv2.imwrite(self.cache_dir + "{0:03}.png".format(idx_frame), frame)
+                            idx_frame += 1
 
-                # Press Q on keyboard to  exit
-                if cv2.waitKey(25) & 0xFF == ord('q'):
-                    break 
-                # Break the loop
-            else: 
-                break
-    
-        # When everything done, release the video capture object
-        cap.release()
-    
-        # Closes all the frames
-        cv2.destroyAllWindows()
+                    # Press Q on keyboard to  exit
+                    if cv2.waitKey(25) & 0xFF == ord('q'):
+                        break 
+                    # Break the loop
+                else: 
+                    break
+        
+            # When everything done, release the video capture object
+            cap.release()
+        
+            # Closes all the frames
+            cv2.destroyAllWindows()
 
-        return landmarks_list
+            return landmarks_list
 
+        elif model == "audio":
+            pass

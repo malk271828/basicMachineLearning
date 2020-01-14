@@ -8,7 +8,10 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 
 import pytest
 import pandas as pd
-import matplotlib as mpl
+
+# visualization
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # Machine Learning
@@ -62,8 +65,8 @@ def test_landmarks(expFixture):
     # specifying cache path
     le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
 
-    landmarks_list = le1.getX(fileName=expFixture.filePath[0], verbose=2)
-    landmarks_list = le2.getX(fileName=expFixture.filePath[0], verbose=2)
+    landmarks_list = le1.getX(fileName=expFixture.filePath[0], verbose=2, modal="video")
+    landmarks_list = le2.getX(fileName=expFixture.filePath[0], verbose=2, modal="video")
 
 @pytest.mark.landmark
 def test_batch(expFixture):

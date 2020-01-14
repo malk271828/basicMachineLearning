@@ -42,18 +42,22 @@ class featureExtractor():
 
     def getX(self,
              fileName:str,
-             verbose:int = 0):
+             verbose:int = 0,
+             **kwargs):
         try:
+            if verbose > 0:
+                print(Fore.CYAN + "trying to load : {0}".format(fileName) + Style.RESET_ALL)
             features_list = self.loadFromCache(fileName=fileName, verbose=verbose)
         except FileNotFoundError:
-            features_list = self._extractFeature(fileName=fileName)
+            features_list = self._extractFeature(fileName=fileName, verbose=verbose, kwargs=kwargs)
             self.saveToCache(features_list=features_list, verbose=verbose)
 
         return features_list
 
     def _extractFeature(self,
                         fileName:str,
-                        verbose:int = 0):
+                        verbose:int = 0,
+                        **kwargs):
         """
         Parameters
         ----------
