@@ -6,7 +6,7 @@ from colorama import *
 init()
 
 # Image Processing
-from skimage.draw import rectangle
+from skimage.draw import rectangle, rectangle_perimeter
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 
@@ -49,7 +49,7 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
         if mode == "add":
             grouped_normalized_flatten_array = return_scaler[0].transform(np.reshape(original_array, newshape=(-1, 1)))
             grouped_normalized_array = np.reshape(grouped_normalized_flatten_array, newshape=shape)
-        elif mode == "overwrite":
+        elif mode == "overwrite" or mode == "overwrite_perimeter":
             grouped_normalized_array = original_array
         list_grouped_normalized_array.append(grouped_normalized_array)
 
@@ -116,10 +116,14 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
             return
 
         # pointwise addition
-        rr, cc = rectangle(start=(x, y), extent=(cx, cy))
         if mode == "add":
+            rr, cc = rectangle(start=(x, y), extent=(cx, cy))
             original_array[rr, cc] += alpha
         elif mode == "overwrite":
+            rr, cc = rectangle(start=(x, y), extent=(cx, cy))
+            original_array[rr, cc] = alpha
+        elif mode == "overwrite_perimeter":
+            rr, cc = rectangle_perimeter(start=(x, y), extent=(cx, cy))
             original_array[rr, cc] = alpha
         else:
             raise ValueError
@@ -131,7 +135,7 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         scaler.fit(np.reshape(original_array, newshape=(-1, 1)))
         normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
         normalized_array = np.reshape(normalized_flatten_array, newshape=(height, width))
-    elif mode == "overwrite":
+    elif mode == "overwrite" or mode == "overwrite_perimeter":
         scaler = None
         normalized_array = original_array
     else:

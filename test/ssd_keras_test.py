@@ -50,7 +50,7 @@ from cv_util import *
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
 @pytest.mark.parametrize("entry", [0, 1])
 @pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
-@pytest.mark.parametrize("mode", ["overwrite"])
+@pytest.mark.parametrize("mode", ["overwrite_perimeter"])
 def test_inference(entry, model_path, target_layer_names, target_layer, mode):
     verbose = 1
     #--------------------------------------------------------------------------
