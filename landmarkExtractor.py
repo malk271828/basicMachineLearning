@@ -98,5 +98,5 @@ class landmarksExtractor(featureExtractor):
 
             return landmarks_list
 
-        elif model == "audio":
-            pass
+        elif kwargs["modal"] == "audio":
+            raise Exception("not implemented")

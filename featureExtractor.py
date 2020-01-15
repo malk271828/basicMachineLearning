@@ -49,7 +49,7 @@ class featureExtractor():
                 print(Fore.CYAN + "trying to load : {0}".format(fileName) + Style.RESET_ALL)
             features_list = self.loadFromCache(fileName=fileName, verbose=verbose)
         except FileNotFoundError:
-            features_list = self._extractFeature(fileName=fileName, verbose=verbose, kwargs=kwargs)
+            features_list = self._extractFeature(fileName=fileName, verbose=verbose, **kwargs)
             self.saveToCache(features_list=features_list, verbose=verbose)
 
         return features_list
