@@ -184,8 +184,8 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
         for target, colored_array in enumerate(list_grouped_colored_array):
             # create output image
             class_name = classes[target]
-            colored_array = np.reshape(colored_array[:,:,:3], newshape=(orig_image.shape[0], orig_image.shape[1], 3))
-            overlayed_array = (colored_array[:,:,:3]*128+orig_image/2.0).astype(np.uint8)
+            colored_array = np.reshape(colored_array[:,:,:orig_image.shape[2]], newshape=orig_image.shape)
+            overlayed_array = (colored_array[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
             for predicted_box in list_predicted_box:
                 if predicted_box[5] == target:
                     rr, cc = rectangle_perimeter(start=(predicted_box[0], predicted_box[1]),
