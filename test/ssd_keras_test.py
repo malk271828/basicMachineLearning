@@ -51,7 +51,7 @@ from lombardFileSelector import *
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
 @pytest.mark.parametrize("entry", [0, 1])
 @pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
-@pytest.mark.parametrize("mode", ["overwrite_perimeter"])
+@pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
 def test_inference(entry, model_path, target_layer_names, target_layer, mode):
     verbose = 1
     #--------------------------------------------------------------------------
@@ -195,7 +195,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
                     ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
             # create output path and directory
-            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_paths[entry]))[0] + "_" + cmStr + "/" + target_layer_names[target_layer]
+            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_paths[entry]))[0] + "_" + cmStr + "_" + mode + "/" + target_layer_names[target_layer]
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
                 print("create dir:{0}".format(output_dir))
