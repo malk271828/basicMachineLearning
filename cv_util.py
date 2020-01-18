@@ -33,7 +33,8 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
         if verbose > 0:
             print("--------------------")
             print("{0} patches in group {1}:".format(len(group), i))
-        original_array, _, _, scaler = generateNormalizedPatchedImage(group, shape, mode=mode, cmStr=cmStr, verbose=verbose)
+        original_array, _, _, scaler = generateNormalizedPatchedImage(group, shape, mode=mode, dry_run=True,
+                                                                      cmStr=cmStr, verbose=verbose)
         try:
             if data_max[0] < scaler.data_max_:
                 data_max[0] = scaler.data_max_
@@ -68,6 +69,7 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
 def generateNormalizedPatchedImage(list_patch_xy:list,
                                    shape:tuple,
                                    mode:str,
+                                   dry_run:bool,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
                                    n_jobs:int = 1):
@@ -82,6 +84,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     mode : string specifying mode
         "add"       - add alpha value of each patch and normalize to limit range to [0, 1]
         "overwrite" - overwrite alpha value without normaling
+    dry_run : boolean
+        If enabled, only scaling factor will be calculated without applying it
     cmStr : string specifying color-map
         available color-maps will be listed in the following link:
         https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
@@ -130,33 +134,53 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
 
     Parallel(n_jobs=n_jobs, require='sharedmem')([delayed(_processPatch)(patch) for patch in sorted(list_patch_xy, key=itemgetter(4))])
 
+    # compute scaling factor for normalization
     if mode == "add":
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaler.fit(np.reshape(original_array, newshape=(-1, 1)))
-        normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
-        normalized_array = np.reshape(normalized_flatten_array, newshape=(height, width))
     elif mode == "overwrite" or mode == "overwrite_perimeter":
         scaler = None
-        normalized_array = original_array
     else:
         raise ValueError
-    colored_array = cm(normalized_array)
+
+    # apply scaling
+    if mode == "add":
+        if not dry_run:
+            normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
+            normalized_array = np.reshape(normalized_flatten_array, newshape=(height, width))
+            colored_array = cm(normalized_array)
+    elif mode == "overwrite" or mode == "overwrite_perimeter":
+        normalized_array = original_array
+        colored_array = cm(normalized_array)
+    else:
+        raise ValueError
 
     if verbose > 0:
         print(Fore.CYAN)
         print("[Original] shape: {0} range:[{1}, {2}]".format(original_array.shape, np.min(original_array), np.max(original_array)))
-        if mode == "add":
+        if "normalized_array" in locals():
             print("[Normalized] shape: {0} range:[{1}, {2}]".format(normalized_array.shape, np.min(normalized_array), np.max(normalized_array)))
-        print("[Colored] shape: {0} range:[{1}, {2}]".format(colored_array.shape, np.min(colored_array), np.max(colored_array)))
+        if "colored_array" in locals():
+            print("[Colored] shape: {0} range:[{1}, {2}]".format(colored_array.shape, np.min(colored_array), np.max(colored_array)))
         print(Style.RESET_ALL)
         if verbose > 1:
             VIS_DIR = "visualization/"
-            normalized_image = Image.fromarray(normalized_array*255)
-            colored_image = Image.fromarray((colored_array*255).astype(np.uint8))
-
-            Image.fromarray(original_array).convert("L").save(VIS_DIR + 'original.gif', quality=95)
-            normalized_image.save(VIS_DIR + 'normalized.gif', quality=95)
-            colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
             print(Fore.MAGENTA + "output to files to {0}".format(VIS_DIR) + Style.RESET_ALL)
 
-    return original_array, normalized_array, colored_array, scaler
+            # output original
+            Image.fromarray(original_array).convert("L").save(VIS_DIR + 'original.gif', quality=95)
+
+            # output normalized
+            if "normalized_array" in locals():
+                normalized_image = Image.fromarray(normalized_array*255)
+                normalized_image.save(VIS_DIR + 'normalized.gif', quality=95)
+
+            # output colored
+            if "colored_array" in locals():
+                colored_image = Image.fromarray((colored_array*255).astype(np.uint8))
+                colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
+
+    if "normalized_array" in locals() and "colored_array" in locals():
+        return original_array, normalized_array, colored_array, scaler
+    else:
+        return original_array, None, None, scaler
