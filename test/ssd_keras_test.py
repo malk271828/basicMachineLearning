@@ -44,6 +44,7 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 
 # original header
 from cv_util import *
+from lombardFileSelector import *
 
 @pytest.mark.parametrize("model_path", ['ssd300_pascal_07+12_102k_steps.h5'])
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
@@ -84,11 +85,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
 
     # We'll only load one image in this example.
     IMG_DIR = "examples/"
-    img_files = ["fish_bike.jpg",
-                "husky.jpg",
-                "cat_and_dog.jpg",
-                "diningTbl.jpg",
-                "cow_and_horse.jpg"]
+    img_paths = fileSelector(IMG_DIR).getFileList()
     classes = ['background',
             'aeroplane', 'bicycle', 'bird', 'boat',
             'bottle', 'bus', 'car', 'cat',
@@ -96,9 +93,9 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
             'horse', 'motorbike', 'person', 'pottedplant',
             'sheep', 'sofa', 'train', 'tvmonitor']
 
-    for img_path in img_files:
-        orig_images.append(imread(IMG_DIR + img_path))
-    img = image.load_img(IMG_DIR + img_files[entry], target_size=(model.get_layer("input_1").input_shape[1:3]))
+    for img_path in img_paths:
+        orig_images.append(imread(img_path))
+    img = image.load_img(img_paths[entry], target_size=(model.get_layer("input_1").input_shape[1:3]))
     img = image.img_to_array(img) 
     input_images.append(img)
     input_images = np.array(input_images)
@@ -198,7 +195,7 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
                     ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
             # create output path and directory
-            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_files[entry]))[0] + "_" + cmStr + "/" + target_layer_names[target_layer]
+            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_paths[entry]))[0] + "_" + cmStr + "/" + target_layer_names[target_layer]
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
                 print("create dir:{0}".format(output_dir))
