@@ -8,7 +8,7 @@ class fileSelector:
         self.base_dir = base_dir
 
     def getFileList(self):
-        path = self.base_dir
+        path = self.base_dir + "/*"
         return glob(path)
 
 class lombardFileSelector(fileSelector):
