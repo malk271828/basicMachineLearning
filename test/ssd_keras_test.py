@@ -142,8 +142,9 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
     # Set the colors for the bounding boxes
     VIS_DIR = "visualization/"
     cmStr = "jet"
-    colors = plt.cm.hsv(np.linspace(0, 1, 21)).tolist()
-    plot_model(model, to_file=VIS_DIR + os.path.basename(model_path) + ".png", show_shapes=True, show_layer_names=True)
+    modelPlotPath = VIS_DIR + os.path.basename(model_path) + ".png"
+    if not os.path.exists(modelPlotPath):
+        plot_model(model, to_file=modelPlotPath, show_shapes=True, show_layer_names=True)
 
     def transformCordinate(box, orgImage, img_width, img_height):
         xmin = box[2] * orgImage.shape[1] / img_width
@@ -170,7 +171,6 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
             for box in y_pred_original_thresh[0]:
                 xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
                 if box[0] == target:
-                    color = colors[int(box[0])]
                     list_predicted_box.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
         _, _, list_grouped_colored_array, scaler = generateNormalizedGroupedPatchedImage(list_patch,
