@@ -8,6 +8,7 @@ import warnings
 import subprocess
 sys.path.insert(0, os.getcwd())
 sys.path.insert(0, "../ssd_keras")
+sys.path.insert(0, "../keras-gradcam")
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 import pytest
@@ -29,13 +30,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from models.keras_ssd300 import ssd_300
-from keras_loss_function.keras_ssd_loss import SSDLoss
-from keras_layers.keras_layer_AnchorBoxes import AnchorBoxes
-from keras_layers.keras_layer_DecodeDetections import DecodeDetections
-from keras_layers.keras_layer_DecodeDetectionsFast import DecodeDetectionsFast
-from keras_layers.keras_layer_L2Normalization import L2Normalization
-
 from ssd_encoder_decoder.ssd_output_decoder import decode_detections, decode_detections_fast
 from data_generator.object_detection_2d_data_generator import DataGenerator
 from data_generator.object_detection_2d_photometric_ops import ConvertTo3Channels
@@ -46,26 +40,15 @@ from data_generator.object_detection_2d_misc_utils import apply_inverse_transfor
 from cv_util import *
 from lombardFileSelector import *
 
-@pytest.mark.parametrize("model_path", ['ssd300_pascal_07+12_102k_steps.h5'])
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
 @pytest.mark.parametrize("entry", [0, 1])
 @pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
 @pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
-def test_inference(entry, model_path, target_layer_names, target_layer, mode):
+def test_inference(kerasSSD, entry, target_layer_names, target_layer, mode):
     verbose = 1
-    #--------------------------------------------------------------------------
-    # Load trained model
-    #--------------------------------------------------------------------------
 
-    # We need to create an SSDLoss object in order to pass that to the model loader.
-    ssd_loss = SSDLoss(neg_pos_ratio=3, n_neg_min=0, alpha=1.0)
-    K.clear_session() # Clear previous models from memory.
-    model = load_model(model_path, custom_objects={'AnchorBoxes': AnchorBoxes,
-                                                'L2Normalization': L2Normalization,
-                                                'DecodeDetections': DecodeDetections,
-                                                'compute_loss': ssd_loss.compute_loss})
-
+    model = kerasSSD
     hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
     layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
     outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
@@ -207,3 +190,6 @@ def test_inference(entry, model_path, target_layer_names, target_layer, mode):
                 fd.write("{0}:{1}".format(target_layer_names[target_layer], str(scaler.data_max_)))
         except AttributeError:
             pass
+
+def test_grad(kerasSSD):
+    model = kerasSSD
