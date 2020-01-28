@@ -7,12 +7,9 @@ import pytest
 from colorama import *
 init()
 
-from keras import backend as K
-from keras.models import load_model, Model
-
 @pytest.fixture
 def visualization():
-    # visualization
+    # visualization module
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -37,6 +34,11 @@ def visualization():
 @pytest.fixture
 def kerasSSD(scope="module"):
     sys.path.insert(0, "../ssd_keras")
+
+    # Machine Learning module
+    from keras import backend as K
+    from keras.models import load_model, Model
+
     from keras_loss_function.keras_ssd_loss import SSDLoss
     from keras_layers.keras_layer_AnchorBoxes import AnchorBoxes
     from keras_layers.keras_layer_DecodeDetections import DecodeDetections
@@ -47,6 +49,8 @@ def kerasSSD(scope="module"):
     #--------------------------------------------------------------------------
 
     model_path = "ssd300_pascal_07+12_102k_steps.h5"
+    VIS_DIR = "visualization/"
+
     # We need to create an SSDLoss object in order to pass that to the model loader.
     ssd_loss = SSDLoss(neg_pos_ratio=3, n_neg_min=0, alpha=1.0)
     K.clear_session() # Clear previous models from memory.
@@ -55,4 +59,15 @@ def kerasSSD(scope="module"):
                                                 'DecodeDetections': DecodeDetections,
                                                 'compute_loss': ssd_loss.compute_loss})
 
-    return model
+    modelPlotPath = VIS_DIR + os.path.basename(model_path) + ".png"
+    if not os.path.exists(modelPlotPath):
+        plot_model(model, to_file=modelPlotPath, show_shapes=True, show_layer_names=True)
+
+    classes = ['background',
+        'aeroplane', 'bicycle', 'bird', 'boat',
+        'bottle', 'bus', 'car', 'cat',
+        'chair', 'cow', 'diningtable', 'dog',
+        'horse', 'motorbike', 'person', 'pottedplant',
+        'sheep', 'sofa', 'train', 'tvmonitor']
+
+    return model, classes

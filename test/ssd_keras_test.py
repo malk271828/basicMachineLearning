@@ -8,7 +8,6 @@ import warnings
 import subprocess
 sys.path.insert(0, os.getcwd())
 sys.path.insert(0, "../ssd_keras")
-sys.path.insert(0, "../keras-gradcam")
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 import pytest
@@ -23,7 +22,6 @@ from keras import backend as K
 from keras.models import load_model, Model
 from keras.preprocessing import image
 from keras.optimizers import Adam
-from keras.utils import plot_model
 
 # visualization
 import matplotlib
@@ -40,6 +38,7 @@ from grad_cam import *
 
 # original header
 from cv_util import *
+from gradcam import *
 from lombardFileSelector import *
 
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
@@ -47,10 +46,10 @@ from lombardFileSelector import *
 @pytest.mark.parametrize("entry", [0, 1])
 @pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
 @pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
-def test_inference(kerasSSD, entry, target_layer_names, target_layer, mode):
+def test_inference(kerasSSD, visualization, entry, target_layer_names, target_layer, mode):
     verbose = 1
 
-    model = kerasSSD
+    model, classes = kerasSSD
     hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
     layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
     outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
@@ -71,12 +70,6 @@ def test_inference(kerasSSD, entry, target_layer_names, target_layer, mode):
     # We'll only load one image in this example.
     IMG_DIR = "examples/"
     img_paths = fileSelector(IMG_DIR).getFileList()
-    classes = ['background',
-            'aeroplane', 'bicycle', 'bird', 'boat',
-            'bottle', 'bus', 'car', 'cat',
-            'chair', 'cow', 'diningtable', 'dog',
-            'horse', 'motorbike', 'person', 'pottedplant',
-            'sheep', 'sofa', 'train', 'tvmonitor']
 
     for img_path in img_paths:
         orig_images.append(imread(img_path))
@@ -127,9 +120,6 @@ def test_inference(kerasSSD, entry, target_layer_names, target_layer, mode):
     # Set the colors for the bounding boxes
     VIS_DIR = "visualization/"
     cmStr = "jet"
-    modelPlotPath = VIS_DIR + os.path.basename(model_path) + ".png"
-    if not os.path.exists(modelPlotPath):
-        plot_model(model, to_file=modelPlotPath, show_shapes=True, show_layer_names=True)
 
     def transformCordinate(box, orgImage, img_width, img_height):
         xmin = box[2] * orgImage.shape[1] / img_width
@@ -180,38 +170,42 @@ def test_inference(kerasSSD, entry, target_layer_names, target_layer, mode):
                     ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
             # create output path and directory
-            output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_paths[entry]))[0] + "_" + cmStr + "_" + mode + "/" + target_layer_names[target_layer]
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-                print("create dir:{0}".format(output_dir))
-            overlayed_img.save(output_dir + "/group{0}_{1}_".format(target, class_name)+cmStr+"_overlayed.bmp")
+            visualization.createOutDir(img_path=img_path, mode=mode, target_layer_name=target_layer_names[target_layer])
+            overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + "_overlayed.bmp")
 
         # output statistics
         try:
-            with open(os.path.dirname(output_dir) + "/stat.txt", mode="a") as fd:
+            with open(os.path.dirname(visualization.output_dir) + "/stat.txt", mode="a") as fd:
                 fd.write("{0}:{1}".format(target_layer_names[target_layer], str(scaler.data_max_)))
         except AttributeError:
             pass
 
-def test_grad(kerasSSD, visualization):
+@pytest.mark.parametrize("entry", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv7_2"]])
+@pytest.mark.parametrize("target_layer", [4])
+def test_grad(kerasSSD,
+              visualization,
+              entry,
+              target_layer_names,
+              target_layer):
     # load component from fixture
-    model = kerasSSD
+    model, classes = kerasSSD
 
     IMG_DIR = "examples/"
-    layer_name = "input_1"
     mode = "gradcam"
 
-    img_path = fileSelector(IMG_DIR).getFileList()[4]
+    img_path = fileSelector(IMG_DIR).getFileList()[entry]
     orig_image = image.img_to_array(image.load_img(img_path, target_size=(300, 300)))
-    X = image.img_to_array(image.load_img(img_path, target_size=(224, 224)))
     preprocessed_input = np.expand_dims(orig_image, axis=0)
 
-    gradcam = grad_cam(model, preprocessed_input, 15, layer_name)
-
     # save file
-    visualization.createOutDir(img_path=img_path, mode=mode)
-    jetcam = visualization.cm(gradcam)
-    overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+X/2.0).astype(np.uint8)
-    overlayed_img = Image.fromarray(overlayed_array)
-    overlayed_img.save(visualization.output_dir + "grad_cam.jpg")
+    visualization.createOutDir(img_path=img_path, mode=mode, target_layer_name=target_layer_names[target_layer])
 
+    for target, class_name in enumerate(classes):
+        #model.predict(preprocessed_input)
+        gradcam = grad_cam(model, preprocessed_input, target, target_layer_names[target_layer], verbose=1)
+
+        jetcam = visualization.cm(gradcam)
+        overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
+        overlayed_img = Image.fromarray(overlayed_array)
+        overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + target_layer_names[target_layer] + "_gradcam.jpg")
