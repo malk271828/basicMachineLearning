@@ -2,10 +2,37 @@ import os
 import sys
 sys.path.insert(0, os.getcwd())
 sys.path.insert(0, "../keras-gradcam")
+
 import pytest
+from colorama import *
+init()
 
 from keras import backend as K
 from keras.models import load_model, Model
+
+@pytest.fixture
+def visualization():
+    # visualization
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    class _visualization():
+        def __init__(self):
+            self.VIS_DIR = "visualization/"
+            self.cmStr = "jet"
+            self.cm = plt.get_cmap(self.cmStr)
+
+        def createOutDir(self, **kwargs):
+            if "target_layer_name" in kwargs.keys():
+                self.output_dir = self.VIS_DIR + os.path.splitext(os.path.basename(kwargs["img_path"]))[0] + "_" + self.cmStr + "_" + kwargs["mode"] + "/" + kwargs["target_layer_name"]
+            else:
+                self.output_dir = self.VIS_DIR + os.path.splitext(os.path.basename(kwargs["img_path"]))[0] + "_" + self.cmStr + "_" + kwargs["mode"] + "/"
+            if not os.path.exists(self.output_dir):
+                os.makedirs(self.output_dir)
+                print(Fore.CYAN + "create dir:{0}".format(self.output_dir) + Style.RESET_ALL)
+
+    return _visualization()
 
 @pytest.fixture
 def kerasSSD(scope="module"):

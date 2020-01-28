@@ -193,14 +193,13 @@ def test_inference(kerasSSD, entry, target_layer_names, target_layer, mode):
         except AttributeError:
             pass
 
-def test_grad(kerasSSD):
-    IMG_DIR = "examples/"
-    VIS_DIR = "visualization/"
-    layer_name = "input_1"
-    cmStr = "jet"
-    mode = "gradcam"
+def test_grad(kerasSSD, visualization):
+    # load component from fixture
     model = kerasSSD
-    cm = plt.get_cmap(cmStr)
+
+    IMG_DIR = "examples/"
+    layer_name = "input_1"
+    mode = "gradcam"
 
     img_path = fileSelector(IMG_DIR).getFileList()[4]
     orig_image = image.img_to_array(image.load_img(img_path, target_size=(300, 300)))
@@ -210,11 +209,9 @@ def test_grad(kerasSSD):
     gradcam = grad_cam(model, preprocessed_input, 15, layer_name)
 
     # save file
-    jetcam = cm(gradcam)
+    visualization.createOutDir(img_path=img_path, mode=mode)
+    jetcam = visualization.cm(gradcam)
     overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+X/2.0).astype(np.uint8)
     overlayed_img = Image.fromarray(overlayed_array)
-    output_dir = VIS_DIR + os.path.splitext(os.path.basename(img_path))[0] + "_" + cmStr + "_" + mode + "/"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        print("create dir:{0}".format(output_dir))
-    overlayed_img.save(output_dir + "grad_cam.jpg")
+    overlayed_img.save(visualization.output_dir + "grad_cam.jpg")
+
