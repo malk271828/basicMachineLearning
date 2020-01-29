@@ -32,8 +32,7 @@ from vae import *
 def expFixture():
     class _expFixture:
         def __init__(self):
-            fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
-            self.filePath = fileSelector.getFileList("visual")[:1]
+            self.fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
 
             # The following message indicates version mismatch between code and model.
             # RuntimeError: Unexpected version found while deserializing dlib::shape_predictor.
@@ -58,15 +57,22 @@ def test_dataFetch(expFixture):
     subprocess.call(["ffmpeg -i {0}.mp4 -vn -f s16le -acodec pcm_s16le soundfile.raw".format(expFixture.fileID)], shell=True, cwd=".")
 
 @pytest.mark.landmark
-def test_landmarks(expFixture):
+@pytest.mark.parametrize("modal", ["visual", "audio"])
+def test_landmarks(expFixture, modal):
+    fileSelector = expFixture.fileSelector
+
     # w/o specifying cache path
     le1 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
 
     # specifying cache path
     le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
 
-    landmarks_list = le1.getX(fileName=expFixture.filePath[0], verbose=2, modal="video")
-    landmarks_list = le2.getX(fileName=expFixture.filePath[0], verbose=2, modal="video")
+    landmarks_list = le1.getX(fileName=fileSelector.getFileList(modal)[0],
+                              verbose=2,
+                              modal=modal)
+    landmarks_list = le2.getX(fileName=fileSelector.getFileList(modal)[0],
+                              verbose=2,
+                              modal=modal)
 
 @pytest.mark.landmark
 def test_batch(expFixture):

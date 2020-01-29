@@ -1,3 +1,4 @@
+import soundfile as sf
 import cv2
 
 # Machine Learning Libraries
@@ -99,4 +100,6 @@ class landmarksExtractor(featureExtractor):
             return landmarks_list
 
         elif kwargs["modal"] == "audio":
-            raise Exception("not implemented")
+            data, samplerate = sf.read(fileName)
+
+            return data
