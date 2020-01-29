@@ -181,7 +181,7 @@ def test_inference(kerasSSD, visualization, entry, target_layer_names, target_la
             pass
 
 @pytest.mark.parametrize("entry", [0, 1, 2, 3, 4])
-@pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv7_2"]])
+@pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_2", "conv4_3", "conv5_3", "conv7_2"]])
 @pytest.mark.parametrize("target_layer", [4])
 def test_grad(kerasSSD,
               visualization,
@@ -199,11 +199,15 @@ def test_grad(kerasSSD,
     preprocessed_input = np.expand_dims(orig_image, axis=0)
 
     # save file
-    visualization.createOutDir(img_path=img_path, mode=mode, target_layer_name=target_layer_names[target_layer])
+    visualization.createOutDir( img_path=img_path,
+                                mode=mode,
+                                target_layer_name=target_layer_names[target_layer])
 
     for target, class_name in enumerate(classes):
-        #model.predict(preprocessed_input)
-        gradcam = grad_cam(model, preprocessed_input, target, target_layer_names[target_layer], verbose=1)
+        pred_y = model.predict(preprocessed_input)
+        gradcam = grad_cam( model, preprocessed_input, target, target_layer_names[target_layer],
+                            verbose=1,
+                            pred_y=pred_y)
 
         jetcam = visualization.cm(gradcam)
         overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
