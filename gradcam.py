@@ -36,7 +36,7 @@ def grad_cam(input_model,
     grads = K.gradients(y_c, conv_output)[0]
 
     # Normalize if necessary
-    # grads = normalize(grads)
+    # grads = tf.keras.backend.l2_normalize(grads)
     gradient_function = K.function([input_model.input], [conv_output, grads])
 
     output, grads_val = gradient_function([image])

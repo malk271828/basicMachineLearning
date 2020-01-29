@@ -38,6 +38,7 @@ def kerasSSD(scope="module"):
     # Machine Learning module
     from keras import backend as K
     from keras.models import load_model, Model
+    from keras.utils import plot_model
 
     from keras_loss_function.keras_ssd_loss import SSDLoss
     from keras_layers.keras_layer_AnchorBoxes import AnchorBoxes
