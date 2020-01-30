@@ -34,8 +34,6 @@ from data_generator.object_detection_2d_photometric_ops import ConvertTo3Channel
 from data_generator.object_detection_2d_geometric_ops import Resize
 from data_generator.object_detection_2d_misc_utils import apply_inverse_transforms
 
-from grad_cam import *
-
 # original header
 from cv_util import *
 from gradcam import *
@@ -181,7 +179,7 @@ def test_inference(kerasSSD, visualization, entry, target_layer_names, target_la
             pass
 
 @pytest.mark.parametrize("entry", [0, 1, 2, 3, 4])
-@pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_2", "conv4_3", "conv5_3", "conv7_2"]])
+@pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv6_2", "conv7_2", "conv8_2", "conv9_2"]])
 @pytest.mark.parametrize("target_layer", [4])
 def test_grad(kerasSSD,
               visualization,
@@ -205,11 +203,11 @@ def test_grad(kerasSSD,
 
     for target, class_name in enumerate(classes):
         pred_y = model.predict(preprocessed_input)
-        gradcam = grad_cam( model, preprocessed_input, target, target_layer_names[target_layer],
+        cam = gradcam( model, preprocessed_input, target, target_layer_names[target_layer],
                             verbose=1,
                             pred_y=pred_y)
 
-        jetcam = visualization.cm(gradcam)
+        jetcam = visualization.cm(cam)
         overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
         overlayed_img = Image.fromarray(overlayed_array)
         overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + target_layer_names[target_layer] + "_gradcam.jpg")
