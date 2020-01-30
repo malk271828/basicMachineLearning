@@ -69,10 +69,12 @@ def test_landmarks(expFixture, modal):
 
     landmarks_list = le1.getX(fileName=fileSelector.getFileList(modal)[0],
                               verbose=2,
-                              modal=modal)
+                              modality=modal)
+    print(landmarks_list)
     landmarks_list = le2.getX(fileName=fileSelector.getFileList(modal)[0],
                               verbose=2,
-                              modal=modal)
+                              modality=modal)
+    print(landmarks_list)
 
 @pytest.mark.landmark
 def test_batch(expFixture):

@@ -38,9 +38,10 @@ class landmarksExtractor(featureExtractor):
 
     def _extractFeature(self,
                         fileName:str,
+                        modality:str = "",
                         verbose:int = 0,
                         **kwargs):
-        if kwargs["modal"] == "video":
+        if modality == "visual":
             if isinstance(fileName, str):
                 cap = cv2.VideoCapture(fileName)
             else:
@@ -99,7 +100,10 @@ class landmarksExtractor(featureExtractor):
 
             return landmarks_list
 
-        elif kwargs["modal"] == "audio":
+        elif modality == "audio":
             data, samplerate = sf.read(fileName)
 
             return data
+        else:
+            print("modality argument must be passed to invoke this method")
+            raise Exception
