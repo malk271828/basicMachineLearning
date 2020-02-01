@@ -178,14 +178,11 @@ def test_inference(kerasSSD, visualization, entry, target_layer_names, target_la
         except AttributeError:
             pass
 
-@pytest.mark.parametrize("entry", [0, 1, 2, 3, 4])
-@pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv6_2", "conv7_2", "conv8_2", "conv9_2"]])
 def test_grad(kerasSSD,
-              visualization,
-              entry,
-              target_layer_names):
+              visualization):
     # load component from fixture
-    model, classes, target_layer = kerasSSD
+    model, classes, target_layer_names, param = kerasSSD
+    target_layer, entry = param.values()
 
     IMG_DIR = "examples/"
     mode = "gradcam"

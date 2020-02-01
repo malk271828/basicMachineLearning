@@ -31,9 +31,11 @@ def visualization():
 
     return _visualization()
 
-@pytest.fixture(params=[2, 3])
+@pytest.fixture(params=[{"target_layer":2, "entry":1}, 
+                        {"target_layer":3, "entry":1}])
 def kerasSSD(request, scope="module"):
     sys.path.insert(0, "../ssd_keras")
+    target_layer_names = ["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv6_2", "conv7_2", "conv8_2", "conv9_2"]
 
     # Machine Learning module
     from keras import backend as K
@@ -71,4 +73,4 @@ def kerasSSD(request, scope="module"):
         'horse', 'motorbike', 'person', 'pottedplant',
         'sheep', 'sofa', 'train', 'tvmonitor']
 
-    return model, classes, request.param
+    return model, classes, target_layer_names, request.param
