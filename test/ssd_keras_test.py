@@ -35,7 +35,7 @@ from data_generator.object_detection_2d_geometric_ops import Resize
 from data_generator.object_detection_2d_misc_utils import apply_inverse_transforms
 
 # original header
-from cv_util import *
+from util.cv_util import *
 from gradcam import *
 from lombardFileSelector import *
 
@@ -180,14 +180,12 @@ def test_inference(kerasSSD, visualization, entry, target_layer_names, target_la
 
 @pytest.mark.parametrize("entry", [0, 1, 2, 3, 4])
 @pytest.mark.parametrize("target_layer_names", [["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv6_2", "conv7_2", "conv8_2", "conv9_2"]])
-@pytest.mark.parametrize("target_layer", [4])
 def test_grad(kerasSSD,
               visualization,
               entry,
-              target_layer_names,
-              target_layer):
+              target_layer_names):
     # load component from fixture
-    model, classes = kerasSSD
+    model, classes, target_layer = kerasSSD
 
     IMG_DIR = "examples/"
     mode = "gradcam"

@@ -31,8 +31,8 @@ def visualization():
 
     return _visualization()
 
-@pytest.fixture
-def kerasSSD(scope="module"):
+@pytest.fixture(params=[2, 3])
+def kerasSSD(request, scope="module"):
     sys.path.insert(0, "../ssd_keras")
 
     # Machine Learning module
@@ -71,4 +71,4 @@ def kerasSSD(scope="module"):
         'horse', 'motorbike', 'person', 'pottedplant',
         'sheep', 'sofa', 'train', 'tvmonitor']
 
-    return model, classes
+    return model, classes, request.param
