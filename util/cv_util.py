@@ -13,6 +13,38 @@ import matplotlib.pyplot as plt
 # Machine Learning Libraries
 from sklearn.preprocessing import MinMaxScaler
 
+class groupedNorm:
+    def __init__(self):
+        self.scaler = None
+        self.data_max = -sys.maxsize
+
+    def computeScaler(self,
+                      GroupedArray,
+                      verbose:int = 0):
+        for array in GroupedArray:
+            scaler = MinMaxScaler()
+            scaler.fit(np.reshape(array, newshape=(-1, 1)))
+            print(scaler.data_max_[0])
+            if self.data_max < scaler.data_max_[0]:
+                self.data_max = scaler.data_max_[0]
+                self.scaler = scaler
+        if verbose > 0:
+            print("data_max:{0}".format(self.data_max))
+        return self.scaler
+
+    def ApplyScaling(self,
+                     GroupedArray,
+                     verbose:int = 0) -> np.array:
+        normalizedArray = GroupedArray.copy()
+        for i, array in enumerate(GroupedArray):
+            normalized_flattened_array = self.scaler.transform(np.reshape(array, newshape=(-1, 1)))
+            length = int(math.sqrt(len(normalized_flattened_array)))
+            normalizedArray[i] = np.reshape(normalized_flattened_array, newshape=(length, length))
+        if verbose > 0:
+            print("length:{0}".format(length))
+            print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
+        return normalizedArray
+
 def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
                                    shape:tuple,
                                    mode:str,
