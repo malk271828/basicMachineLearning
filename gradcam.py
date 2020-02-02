@@ -47,16 +47,12 @@ def gradcam(input_model,
     # Process CAM
     cam = cv2.resize(cam, image.shape[1:3], cv2.INTER_LINEAR)
     cam = np.maximum(cam, 0)
-    # cam_max = cam.max() 
-    # if cam_max != 0: 
-    #     cam = cam / cam_max
 
     if verbose > 0:
         print("cls:{0}".format(cls))
         print("shape of y_c:{0}".format(y_c.get_shape()))
         print("shape of conv_output:{0}".format(conv_output.get_shape()))
         print("shape of cam:{0}".format(cam.shape))
-        #print("cam_max:{0}".format(cam_max))
         tf.print(y_c, [pred_y], output_stream=sys.stderr)
 
     return cam

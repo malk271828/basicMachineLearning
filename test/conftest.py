@@ -7,6 +7,13 @@ import pytest
 from colorama import *
 init()
 
+# visualization
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+from util.cv_util import *
+
 @pytest.fixture
 def visualization():
     # visualization module
@@ -33,7 +40,7 @@ def visualization():
 
 @pytest.fixture(params=[{"target_layer":2, "entry":1}, 
                         {"target_layer":3, "entry":1}])
-def kerasSSD(request, scope="module"):
+def kerasSSD(request, scope="session"):
     sys.path.insert(0, "../ssd_keras")
     target_layer_names = ["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv6_2", "conv7_2", "conv8_2", "conv9_2"]
 
@@ -73,4 +80,6 @@ def kerasSSD(request, scope="module"):
         'horse', 'motorbike', 'person', 'pottedplant',
         'sheep', 'sofa', 'train', 'tvmonitor']
 
-    return model, classes, target_layer_names, request.param
+    gn = groupedNorm()
+
+    return model, classes, target_layer_names, gn, request.param

@@ -181,8 +181,8 @@ def test_inference(kerasSSD, visualization, entry, target_layer_names, target_la
 def test_grad(kerasSSD,
               visualization):
     # load component from fixture
-    model, classes, target_layer_names, param = kerasSSD
-    target_layer, entry = param.values()
+    model, classes, target_layer_names, gn, param = kerasSSD
+    target_layer, entry = param["target_layer"], param["entry"]
 
     IMG_DIR = "examples/"
     mode = "gradcam"
@@ -191,18 +191,27 @@ def test_grad(kerasSSD,
     orig_image = image.img_to_array(image.load_img(img_path, target_size=(300, 300)))
     preprocessed_input = np.expand_dims(orig_image, axis=0)
 
-    # save file
+    # create output directory
     visualization.createOutDir( img_path=img_path,
                                 mode=mode,
                                 target_layer_name=target_layer_names[target_layer])
 
-    for target, class_name in enumerate(classes):
+    # create class activation map
+    GroupedCam = list()
+    for target in range(len(classes)):
         pred_y = model.predict(preprocessed_input)
         cam = gradcam( model, preprocessed_input, target, target_layer_names[target_layer],
-                            verbose=1,
+                            verbose=0,
                             pred_y=pred_y)
+        GroupedCam.append(cam)
 
+    # compute normalizing factor
+    gn.computeScaler(GroupedCam, verbose=1)
+    GroupedCam = gn.ApplyScaling(GroupedCam, verbose=1)
+
+    # apply scaling and save figure
+    for target, cam in enumerate(GroupedCam):
         jetcam = visualization.cm(cam)
         overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
         overlayed_img = Image.fromarray(overlayed_array)
-        overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + target_layer_names[target_layer] + "_gradcam.jpg")
+        overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, classes[target]) + "gradcam.jpg")
