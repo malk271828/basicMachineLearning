@@ -38,8 +38,20 @@ def visualization():
 
     return _visualization()
 
-@pytest.fixture(params=[{"target_layer":2, "entry":1}, 
-                        {"target_layer":3, "entry":1}])
+def getDictCombination(d):
+    """
+    Helper function for getting all the combination from dictionary
+
+    Reference
+    ---------
+    https://riptutorial.com/python/example/10160/all-combinations-of-dictionary-values
+    """
+    import itertools
+    keys = d.keys()
+    values = (d[key] for key in keys)
+    return [dict(zip(keys, combination)) for combination in itertools.product(*values)]
+
+@pytest.fixture(params=getDictCombination({"target_layer":[1, 3], "entry":[1]}))
 def kerasSSD(request, scope="session"):
     sys.path.insert(0, "../ssd_keras")
     target_layer_names = ["conv2_2", "conv3_3", "conv4_3", "conv5_3", "conv6_2", "conv7_2", "conv8_2", "conv9_2"]
