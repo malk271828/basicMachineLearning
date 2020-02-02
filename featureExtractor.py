@@ -84,25 +84,33 @@ class batchExtractor(featureExtractor):
 
     def getX(self,
              filePathList:list,
+             modality:str = "",
              file_squeeze:bool = True,
-             verbose:int = 0):
+             verbose:int = 0,
+             **kwargs):
         concatPath = "".join(filePathList)
         self.concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
         self.filePathList = filePathList
         self.file_squeeze = file_squeeze
 
-        return super().getX(self.concatCachePath)
+        return super().getX(fileName=self.concatCachePath,
+                            modality=modality,
+                            **kwargs)
 
     def _extractFeature(self,
                         fileName:str,
-                        verbose:int = 0):
+                        modality:str = "",
+                        verbose:int = 0,
+                        **kwargs):
         # extract feature from each file
         if verbose > 0:
             fileListIterator = tqdm(filePathList, ascii=True)
         else:
             fileListIterator = self.filePathList
         for filePath in fileListIterator:
-            features = self.singleFileExtractor.getX(fileName=filePath, verbose=verbose)
+            features = self.singleFileExtractor.getX(fileName=filePath,
+                                                     modality=modality,
+                                                     verbose=verbose)
             if "samples" in locals():
                 samples = np.vstack([samples, features])
             else:

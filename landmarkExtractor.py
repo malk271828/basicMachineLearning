@@ -105,5 +105,4 @@ class landmarksExtractor(featureExtractor):
 
             return data
         else:
-            print("modality argument must be passed to invoke this method")
-            raise Exception
+            raise Exception("modality argument must be passed to invoke this method")

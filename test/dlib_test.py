@@ -63,24 +63,28 @@ def test_landmarks(expFixture, modal):
 
     # w/o specifying cache path
     le1 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
-
-    # specifying cache path
-    le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
-
     landmarks_list = le1.getX(fileName=fileSelector.getFileList(modal)[0],
                               verbose=2,
                               modality=modal)
+    assert 0 != len(landmarks_list)
     print(landmarks_list)
+
+    # specifying cache path
+    le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
     landmarks_list = le2.getX(fileName=fileSelector.getFileList(modal)[0],
                               verbose=2,
                               modality=modal)
+    assert 0 != len(landmarks_list)
     print(landmarks_list)
 
 @pytest.mark.landmark
-def test_batch(expFixture):
+@pytest.mark.parametrize("modal", ["visual", "audio"])
+def test_batch(expFixture, modal):
+    fileSelector = expFixture.fileSelector
+
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH))
-    X = be.getX(filePathList=expFixture.filePath, verbose=2)
-    X = be.getX(filePathList=expFixture.filePath, verbose=2)
+    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10], verbose=2, modality=modal)
+    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10], verbose=2, modality=modal)
     print(X.shape)
     print(list(X[0]))
 
