@@ -41,13 +41,15 @@ from lombardFileSelector import *
 
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
-@pytest.mark.parametrize("entry", [0, 1])
-@pytest.mark.parametrize("target_layer", [0, 1, 2, 3, 4, 5, 6])
 @pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
-def test_inference(kerasSSD, visualization, entry, target_layer_names, target_layer, mode):
+def test_inference(kerasSSD,
+                   visualization,
+                   target_layer_names,
+                   mode):
     verbose = 1
 
-    model, classes = kerasSSD
+    model, classes, _, gn, param = kerasSSD
+    target_layer, entry = param["target_layer"], param["entry"]
     hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
     layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
     outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
