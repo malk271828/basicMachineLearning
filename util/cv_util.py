@@ -1,3 +1,6 @@
+import sys
+import math
+
 from operator import itemgetter, attrgetter
 from joblib import Parallel, delayed
 import numpy as np
@@ -24,12 +27,12 @@ class groupedNorm:
         for array in GroupedArray:
             scaler = MinMaxScaler()
             scaler.fit(np.reshape(array, newshape=(-1, 1)))
-            print(scaler.data_max_[0])
             if self.data_max < scaler.data_max_[0]:
                 self.data_max = scaler.data_max_[0]
                 self.scaler = scaler
         if verbose > 0:
             print("data_max:{0}".format(self.data_max))
+        assert self.scaler != None
         return self.scaler
 
     def ApplyScaling(self,
