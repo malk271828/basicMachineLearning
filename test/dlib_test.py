@@ -86,9 +86,9 @@ def test_batch(expFixture, modal):
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10], verbose=2, modality=modal)
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10], verbose=2, modality=modal)
     print(X.shape)
-    print(list(X[0]))
 
-    assert X[0][landmarksExtractor.DLIB_CENTER_INDEX*2] == 0 and X[0][landmarksExtractor.DLIB_CENTER_INDEX*2+1] == 0
+    if modal == "visual":
+        assert X[0][landmarksExtractor.DLIB_CENTER_INDEX*2] == 0 and X[0][landmarksExtractor.DLIB_CENTER_INDEX*2+1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")

@@ -73,6 +73,12 @@ class featureExtractor():
         """
         raise NotImplemented
 
+def padStack(a):
+    b = np.zeros([len(a), len(max(a, key = lambda x: len(x)))])
+    for i, j in enumerate(a):
+        b[i][:len(j)] = j
+    return b
+
 class batchExtractor(featureExtractor):
     """
     Decorator pattern batchExtractor
@@ -107,16 +113,18 @@ class batchExtractor(featureExtractor):
             fileListIterator = tqdm(filePathList, ascii=True)
         else:
             fileListIterator = self.filePathList
+        samples = list()
         for filePath in fileListIterator:
             features = self.singleFileExtractor.getX(fileName=filePath,
                                                      modality=modality,
                                                      verbose=verbose)
-            if "samples" in locals():
-                samples = np.vstack([samples, features])
-            else:
-                samples = features
+            samples.append(features)
 
         if self.file_squeeze:
-            samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
+            # TODO
+            # samples = padStack(samples)
+            # for i, sample in enumerate(samples):
+                
+            #samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
 
         return samples
