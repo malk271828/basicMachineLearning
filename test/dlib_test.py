@@ -83,12 +83,16 @@ def test_batch(expFixture, modal):
     fileSelector = expFixture.fileSelector
 
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH))
-    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10], verbose=2, modality=modal)
-    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10], verbose=2, modality=modal)
-    print(X.shape)
+    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
+                verbose=2,
+                modality=modal)
+    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
+                verbose=2,
+                modality=modal)
 
     if modal == "visual":
-        assert X[0][landmarksExtractor.DLIB_CENTER_INDEX*2] == 0 and X[0][landmarksExtractor.DLIB_CENTER_INDEX*2+1] == 0
+        assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+        assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")

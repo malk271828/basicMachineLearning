@@ -121,10 +121,12 @@ class batchExtractor(featureExtractor):
             samples.append(features)
 
         if self.file_squeeze:
-            # TODO
-            # samples = padStack(samples)
-            # for i, sample in enumerate(samples):
-                
+            for sample in samples:
+                if "return_samples" in locals():
+                    np.concatenate([return_samples, sample], axis=0)
+                else:
+                    return_samples = sample
+
             #samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
 
         return samples
