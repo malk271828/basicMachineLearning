@@ -79,20 +79,30 @@ def test_landmarks(expFixture, modal):
 
 @pytest.mark.landmark
 @pytest.mark.parametrize("modal", ["visual", "audio"])
-def test_batch(expFixture, modal):
+@pytest.mark.parametrize("file_squeeze", [False])
+def test_batch( expFixture,
+                modal,
+                file_squeeze):
     fileSelector = expFixture.fileSelector
 
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH))
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
+                file_squeeze=file_squeeze,
                 verbose=2,
                 modality=modal)
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
+                file_squeeze=file_squeeze,
                 verbose=2,
                 modality=modal)
 
     if modal == "visual":
-        assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-        assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
+        if file_squeeze:
+            pass
+        else:
+            assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+            assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
+    else:
+        assert len(X) != 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
