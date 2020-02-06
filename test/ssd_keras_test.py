@@ -148,10 +148,10 @@ def test_inference(kerasSSD,
                 if box[0] == target:
                     list_predicted_box.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
-        _, _, list_grouped_colored_array, scaler = generateNormalizedGroupedPatchedImage(list_patch,
-                                                                                    shape=(orig_image.shape[1], orig_image.shape[0]),
-                                                                                    mode=mode,
-                                                                                    verbose=verbose)
+        _, _, list_grouped_colored_array = generateNormalizedGroupedPatchedImage(list_patch,
+                                                                                shape=(orig_image.shape[1], orig_image.shape[0]),
+                                                                                mode=mode,
+                                                                                verbose=verbose)
 
         for target, colored_array in enumerate(list_grouped_colored_array):
             # create output image
@@ -172,13 +172,6 @@ def test_inference(kerasSSD,
             # create output path and directory
             visualization.createOutDir(img_path=img_path, mode=mode, target_layer_name=target_layer_names[target_layer])
             overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + "_overlayed.bmp")
-
-        # output statistics
-        try:
-            with open(os.path.dirname(visualization.output_dir) + "/stat.txt", mode="a") as fd:
-                fd.write("{0}:{1}".format(target_layer_names[target_layer], str(scaler.data_max_)))
-        except AttributeError:
-            pass
 
 def test_grad(kerasSSD,
               visualization):

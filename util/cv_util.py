@@ -37,12 +37,15 @@ class groupedNorm:
 
     def ApplyScaling(self,
                      GroupedArray,
+                     newshape:tuple,
                      verbose:int = 0) -> np.array:
         normalizedArray = GroupedArray.copy()
         for i, array in enumerate(GroupedArray):
             normalized_flattened_array = self.scaler.transform(np.reshape(array, newshape=(-1, 1)))
-            length = int(math.sqrt(len(normalized_flattened_array)))
-            normalizedArray[i] = np.reshape(normalized_flattened_array, newshape=(length, length))
+            if newshape == None:
+                length = int(math.sqrt(len(normalized_flattened_array)))
+                newshape = (length, length)
+            normalizedArray[i] = np.reshape(normalized_flattened_array, newshape=newshape)
         if verbose > 0:
             print("length:{0}".format(length))
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
@@ -58,53 +61,50 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
     data_max = np.array([0], dtype=np.float32)
-    return_scaler = np.array([None], dtype=object)
     list_original_array = list()
     list_grouped_normalized_array = list()
-    list_grouped_colored_array = list()
     cm = plt.get_cmap(cmStr)
 
     def _processGroup(i, group):
         if verbose > 0:
             print("--------------------")
             print("{0} patches in group {1}:".format(len(group), i))
-        original_array, _, _, scaler = generateNormalizedPatchedImage(group, shape, mode=mode, dry_run=True,
-                                                                      cmStr=cmStr, verbose=verbose)
-        try:
-            if data_max[0] < scaler.data_max_:
-                data_max[0] = scaler.data_max_
-                return_scaler[0] = scaler
-        except AttributeError:
-            pass
+        original_array = generateNormalizedPatchedImage(group, shape, mode=mode,
+                                                                      cmStr=cmStr,
+                                                                      verbose=0)
         list_original_array.append(original_array)
 
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
 
-    # calculate inter-group maximum scaling factor
-    for original_array, list_patch_xy in zip(list_original_array, list_grouped_patch_xy):
-        if mode == "add":
-            grouped_normalized_flatten_array = return_scaler[0].transform(np.reshape(original_array, newshape=(-1, 1)))
-            grouped_normalized_array = np.reshape(grouped_normalized_flatten_array, newshape=shape)
-        elif mode == "overwrite" or mode == "overwrite_perimeter":
-            grouped_normalized_array = original_array
-        list_grouped_normalized_array.append(grouped_normalized_array)
+    # compute scaling factor for normalization
+    gn = groupedNorm()
+    if mode == "add":
+        gn.computeScaler(list_original_array)
+    elif mode == "overwrite" or mode == "overwrite_perimeter":
+        scaler = None
+    else:
+        raise ValueError
 
-        # generate colored image
-        colored_array = cm(grouped_normalized_array)
-        list_grouped_colored_array.append(colored_array)
+    # apply scaling
+    if mode == "add":
+        grouped_normalized_array = gn.ApplyScaling(list_original_array, newshape=shape)
+    elif mode == "overwrite" or mode == "overwrite_perimeter":
+        grouped_normalized_array = list_original_array
+    else:
+        raise ValueError
+    colored_array = cm(grouped_normalized_array)
 
     if verbose > 0:
         print("")
         print("number of groups: {0}".format(len(list_original_array)))
         print("data_max: {0}".format(data_max))
-        print("[Grouped] range:[{0}, {1}]".format(np.min(list_grouped_colored_array), np.max(list_grouped_colored_array)))
+        print("[Grouped] range:[{0}, {1}]".format(np.min(colored_array), np.max(colored_array)))
 
-    return list_original_array, list_grouped_normalized_array, list_grouped_colored_array, return_scaler[0]
+    return list_original_array, list_grouped_normalized_array, colored_array
 
 def generateNormalizedPatchedImage(list_patch_xy:list,
                                    shape:tuple,
                                    mode:str,
-                                   dry_run:bool,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
                                    n_jobs:int = 1):
@@ -119,8 +119,6 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
     mode : string specifying mode
         "add"       - add alpha value of each patch and normalize to limit range to [0, 1]
         "overwrite" - overwrite alpha value without normaling
-    dry_run : boolean
-        If enabled, only scaling factor will be calculated without applying it
     cmStr : string specifying color-map
         available color-maps will be listed in the following link:
         https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
@@ -169,27 +167,6 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
 
     Parallel(n_jobs=n_jobs, require='sharedmem')([delayed(_processPatch)(patch) for patch in sorted(list_patch_xy, key=itemgetter(4))])
 
-    # compute scaling factor for normalization
-    if mode == "add":
-        scaler = MinMaxScaler(feature_range=(0, 1))
-        scaler.fit(np.reshape(original_array, newshape=(-1, 1)))
-    elif mode == "overwrite" or mode == "overwrite_perimeter":
-        scaler = None
-    else:
-        raise ValueError
-
-    # apply scaling
-    if mode == "add":
-        if not dry_run:
-            normalized_flatten_array = scaler.transform(np.reshape(original_array, newshape=(-1, 1)))
-            normalized_array = np.reshape(normalized_flatten_array, newshape=(height, width))
-            colored_array = cm(normalized_array)
-    elif mode == "overwrite" or mode == "overwrite_perimeter":
-        normalized_array = original_array
-        colored_array = cm(normalized_array)
-    else:
-        raise ValueError
-
     if verbose > 0:
         print(Fore.CYAN)
         print("[Original] shape: {0} range:[{1}, {2}]".format(original_array.shape, np.min(original_array), np.max(original_array)))
@@ -215,7 +192,4 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
                 colored_image = Image.fromarray((colored_array*255).astype(np.uint8))
                 colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
 
-    if "normalized_array" in locals() and "colored_array" in locals():
-        return original_array, normalized_array, colored_array, scaler
-    else:
-        return original_array, None, None, scaler
+    return original_array
