@@ -23,7 +23,10 @@ class groupedNorm:
 
     def computeScaler(self,
                       GroupedArray,
-                      verbose:int = 0):
+                      verbose:int = 0) -> MinMaxScaler:
+        """
+        compute scaling factor without applying normalization
+        """
         for array in GroupedArray:
             scaler = MinMaxScaler()
             scaler.fit(np.reshape(array, newshape=(-1, 1)))
@@ -39,6 +42,9 @@ class groupedNorm:
                      GroupedArray,
                      newshape:tuple,
                      verbose:int = 0) -> np.array:
+        """
+        Apply normalization with computed scaling factor
+        """
         normalizedArray = GroupedArray.copy()
         for i, array in enumerate(GroupedArray):
             normalized_flattened_array = self.scaler.transform(np.reshape(array, newshape=(-1, 1)))
@@ -71,7 +77,7 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
             print("{0} patches in group {1}:".format(len(group), i))
         original_array = generateNormalizedPatchedImage(group, shape, mode=mode,
                                                                       cmStr=cmStr,
-                                                                      verbose=0)
+                                                                      verbose=verbose)
         list_original_array.append(original_array)
 
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
@@ -81,7 +87,7 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
     if mode == "add":
         gn.computeScaler(list_original_array)
     elif mode == "overwrite" or mode == "overwrite_perimeter":
-        scaler = None
+        pass
     else:
         raise ValueError
 

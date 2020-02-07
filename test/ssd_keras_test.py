@@ -55,12 +55,6 @@ def test_inference(kerasSSD,
     outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
     boxIndexPair = [(0, sum(outDBoxNums))] + [(sum(outDBoxNums[:i]), sum(outDBoxNums[:i+1])) for i in range(len(outDBoxNums))]
 
-    if verbose > 0:
-        print(Fore.GREEN + "target layer name: {0}".format(target_layer_names[target_layer]))
-        print("layer_shape: {0}".format(layer_shape))
-        print("boxIndexPair: {0}".format(boxIndexPair))
-        print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
-
     #--------------------------------------------------------------------------
     # load test images
     #--------------------------------------------------------------------------
@@ -77,6 +71,13 @@ def test_inference(kerasSSD,
     img = image.img_to_array(img) 
     input_images.append(img)
     input_images = np.array(input_images)
+
+    if verbose > 0:
+        print(Fore.GREEN + "orig_image:{0}".format(img_paths[entry]))
+        print("target layer name: {0}".format(target_layer_names[target_layer]))
+        print("layer_shape: {0}".format(layer_shape))
+        print("boxIndexPair: {0}".format(boxIndexPair))
+        print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
 
     #--------------------------------------------------------------------------
     # Inference & Decode
@@ -170,7 +171,7 @@ def test_inference(kerasSSD,
                     ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
             # create output path and directory
-            visualization.createOutDir(img_path=img_path, mode=mode, target_layer_name=target_layer_names[target_layer])
+            visualization.createOutDir(img_path=img_paths[entry], mode=mode, target_layer_name=target_layer_names[target_layer])
             overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + "_overlayed.bmp")
 
 def test_grad(kerasSSD,
