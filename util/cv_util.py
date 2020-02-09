@@ -21,18 +21,34 @@ class groupedNorm:
         self.scaler = None
         self.data_max = -sys.maxsize
 
+    def _fitScaler(self, array) -> MinMaxScaler:
+        scaler = MinMaxScaler()
+        scaler.fit(np.reshape(array, newshape=(-1, 1)))
+        if self.data_max < scaler.data_max_[0]:
+            self.data_max = scaler.data_max_[0]
+            self.scaler = scaler
+
     def computeScaler(self,
                       GroupedArray,
+                      deeper: bool = False,
                       verbose:int = 0) -> MinMaxScaler:
         """
-        compute scaling factor without applying normalization
+        compute scaling factor without applying normalization.
+        Groupding axis is the first dimension of 1st argument tensor.
+
+        GroupedArray: array, required
+            Source array which to be normalized
+        deeper: boolean, optional
+            If enabled, grouping axis get an additional dimension
         """
         for array in GroupedArray:
-            scaler = MinMaxScaler()
-            scaler.fit(np.reshape(array, newshape=(-1, 1)))
-            if self.data_max < scaler.data_max_[0]:
-                self.data_max = scaler.data_max_[0]
-                self.scaler = scaler
+            # TODO: can take n-dimensional loop
+            if deeper:
+                for subArray in array:
+                    self._fitScaler(subArray)
+            else:
+                self._fitScaler(array)
+
         if verbose > 0:
             print("data_max:{0}".format(self.data_max))
         assert self.scaler != None
@@ -45,6 +61,8 @@ class groupedNorm:
         """
         Apply normalization with computed scaling factor
         """
+        if self.scaler == None:
+            raise Exception("before invoking this method")
         normalizedArray = GroupedArray.copy()
         for i, array in enumerate(GroupedArray):
             normalized_flattened_array = self.scaler.transform(np.reshape(array, newshape=(-1, 1)))
