@@ -75,12 +75,17 @@ class groupedNorm:
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
         return normalizedArray
 
-def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
+def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
                                    shape:tuple,
                                    mode:str,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
                                    n_jobs:int = 1):
+    """
+    Return
+    ------
+    Tuple of (overlayed image, normalized image, colored image)
+    """
     # note:
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
@@ -93,9 +98,9 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
         if verbose > 0:
             print("--------------------")
             print("{0} patches in group {1}:".format(len(group), i))
-        original_array = generateNormalizedPatchedImage(group, shape, mode=mode,
-                                                                      cmStr=cmStr,
-                                                                      verbose=verbose)
+        original_array = generatePatchedImage(group, shape, mode=mode,
+                                                            cmStr=cmStr,
+                                                            verbose=verbose)
         list_original_array.append(original_array)
 
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
@@ -126,13 +131,15 @@ def generateNormalizedGroupedPatchedImage(list_grouped_patch_xy:list,
 
     return list_original_array, list_grouped_normalized_array, colored_array
 
-def generateNormalizedPatchedImage(list_patch_xy:list,
-                                   shape:tuple,
-                                   mode:str,
-                                   cmStr:str = "jet",
-                                   verbose:int = 0,
-                                   n_jobs:int = 1):
+def generatePatchedImage(list_patch_xy:list,
+                         shape:tuple,
+                         mode:str,
+                         cmStr:str = "jet",
+                         verbose:int = 0,
+                         n_jobs:int = 1):
     """
+    Create multiple-patched image from a list of patch information
+
     Parameters
     ----------
     list_patch_xy : list of (x, y, cx, cy, alpha)
@@ -142,7 +149,8 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
         indicate size of image
     mode : string specifying mode
         "add"       - add alpha value of each patch and normalize to limit range to [0, 1]
-        "overwrite" - overwrite alpha value without normaling
+        "overwrite" - overwrite alpha value on filled shapes without normaling
+        "overwrite_perimeter" - overwrite alpha value only on perimeter of shapes without normaling
     cmStr : string specifying color-map
         available color-maps will be listed in the following link:
         https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html
@@ -153,9 +161,7 @@ def generateNormalizedPatchedImage(list_patch_xy:list,
 
     Return
     ------
-    tuple of array of (original image, normalized image, color-map image, scaler)
-    The last scaler which have the highest data_max_ value will be chosen, and
-    when mode is "add", scaler is always None.
+    Array of a multiple-patch overlayed image
 
     Reference
     ---------

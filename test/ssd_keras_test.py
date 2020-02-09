@@ -149,10 +149,10 @@ def test_inference(kerasSSD,
                 if box[0] == target:
                     list_predicted_box.append((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
-        _, _, list_grouped_colored_array = generateNormalizedGroupedPatchedImage(list_patch,
-                                                                                shape=(orig_image.shape[1], orig_image.shape[0]),
-                                                                                mode=mode,
-                                                                                verbose=verbose)
+        _, _, list_grouped_colored_array = generateNormalizedPatchedImage(list_patch,
+                                                                          shape=(orig_image.shape[1], orig_image.shape[0]),
+                                                                          mode=mode,
+                                                                          verbose=verbose)
 
         for target, colored_array in enumerate(list_grouped_colored_array):
             # create output image
