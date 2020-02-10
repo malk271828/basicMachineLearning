@@ -1,9 +1,16 @@
 import numpy as np
+import pytest
 
-def test_nd():
+@pytest.fixture(params=[1, 2, 3])
+def createArray(request):
     # create data
-    n = 3
+    n = request.param
     array = np.arange(0, 16, 1).reshape(2, 2, 2, 2)
+
+    return array, n
+
+def test_nditer(createArray):
+    array, n = createArray
 
     # nditer test
     it = np.nditer( array[0],
@@ -18,3 +25,11 @@ def test_nd():
     # Ellipsis test
     for subarray in array[..., :]:
         print(subarray.shape)
+
+def test_ndindex(createArray):
+    """
+    numpy ndindex test
+    """
+    array, n = createArray
+    for indices in np.ndindex(array.shape[:n]):
+        print("indices:{0} value:{1}".format(indices, array[indices]))
