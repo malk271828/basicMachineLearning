@@ -49,8 +49,7 @@ def test_inference(kerasSSD,
     verbose = 1
 
     model, classes, _, gn, param = kerasSSD
-    target_layer, entry = param["target_layer"], param["entry"]
-    hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
+    entry = param["entry"]
     layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
     outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
     boxIndexPair = [(0, sum(outDBoxNums))] + [(sum(outDBoxNums[:i]), sum(outDBoxNums[:i+1])) for i in range(len(outDBoxNums))]
@@ -72,13 +71,6 @@ def test_inference(kerasSSD,
     input_images.append(img)
     input_images = np.array(input_images)
 
-    if verbose > 0:
-        print(Fore.GREEN + "orig_image:{0}".format(img_paths[entry]))
-        print("target layer name: {0}".format(target_layer_names[target_layer]))
-        print("layer_shape: {0}".format(layer_shape))
-        print("boxIndexPair: {0}".format(boxIndexPair))
-        print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
-
     #--------------------------------------------------------------------------
     # Inference & Decode
     #--------------------------------------------------------------------------
@@ -99,21 +91,9 @@ def test_inference(kerasSSD,
         "img_width" : img.shape[1]
     }
     y_pred_original = np.array(decode_detections(y_pred_encoded[0], **decode_param_original))
-    list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,slice(*boxIndexPair[target_layer]),:], **decode_param)), y_pred_encoded))
 
-    #--------------------------------------------------------------------------
-    # Filtering
-    #--------------------------------------------------------------------------
     confidence_threshold_original = 0.4
     confidence_threshold = 0.00
-
-    y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
-    y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
-
-    np.set_printoptions(precision=2, suppress=True, linewidth=90)
-    print("Predicted {0} boxes:\n".format(len(y_pred_thresh[0])))
-    print('   class   conf xmin   ymin   xmax   ymax')
-    print(y_pred_thresh[0])
 
 
     # Display the image and draw the predicted boxes onto it.
@@ -131,6 +111,30 @@ def test_inference(kerasSSD,
         return xmin, ymin, xmax, ymax
 
     for idx_image, orig_image in enumerate(orig_images[entry:entry+1]):
+        target_layer = param["target_layer"]
+        hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
+
+        list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,slice(*boxIndexPair[target_layer]),:], **decode_param)), y_pred_encoded))
+
+
+        #--------------------------------------------------------------------------
+        # Filtering
+        #--------------------------------------------------------------------------
+        y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
+        y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
+
+        np.set_printoptions(precision=2, suppress=True, linewidth=90)
+        print("Predicted {0} boxes:\n".format(len(y_pred_thresh[0])))
+        print('   class   conf xmin   ymin   xmax   ymax')
+        print(y_pred_thresh[0])
+
+        if verbose > 0:
+            print(Fore.GREEN + "orig_image:{0}".format(img_paths[entry]))
+            print("target layer name: {0}".format(target_layer_names[target_layer]))
+            print("layer_shape: {0}".format(layer_shape))
+            print("boxIndexPair: {0}".format(boxIndexPair))
+            print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
+
         list_patch = list()
         list_predicted_box = list()
         for target, class_name in enumerate(classes):
