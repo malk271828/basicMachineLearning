@@ -174,6 +174,7 @@ def generatePatchedImage(list_patch_xy:list,
 
     def _processPatch(patch:tuple):
         x, y, cx, cy, alpha = patch
+        x, y, cx, cy = int(x), int(y), int(cx), int(cy)
         # clipping
         if x + cx >= height:
             cx = height - x - 1
