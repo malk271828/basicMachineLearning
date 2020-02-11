@@ -30,7 +30,7 @@ class groupedNorm:
 
     def computeScaler(self,
                       GroupedArray,
-                      deeper: bool = False,
+                      grouped_dim: int = 1,
                       verbose:int = 0) -> MinMaxScaler:
         """
         compute scaling factor without applying normalization.
@@ -41,13 +41,8 @@ class groupedNorm:
         deeper: boolean, optional
             If enabled, grouping axis get an additional dimension
         """
-        for array in GroupedArray:
-            # TODO: can take n-dimensional loop
-            if deeper:
-                for subArray in array:
-                    self._fitScaler(subArray)
-            else:
-                self._fitScaler(array)
+        for indices in np.ndindex(GroupedArray.shape[:grouped_dim]):
+            self._fitScaler(GroupedArray[indices])
 
         if verbose > 0:
             print("data_max:{0}".format(self.data_max))
@@ -75,9 +70,10 @@ class groupedNorm:
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
         return normalizedArray
 
-def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
+def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
                                    shape:tuple,
                                    mode:str,
+                                   grouped_dim:int = 1,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
                                    n_jobs:int = 1):
@@ -90,7 +86,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
     data_max = np.array([0], dtype=np.float32)
-    list_original_array = list()
+    original_arrays = np.zeros((list_grouped_patch_xy.shape[grouped_dim - 1],) + (shape[1], shape[0]))
     list_grouped_normalized_array = list()
     cm = plt.get_cmap(cmStr)
 
@@ -101,14 +97,14 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
         original_array = generatePatchedImage(group, shape, mode=mode,
                                                             cmStr=cmStr,
                                                             verbose=verbose)
-        list_original_array.append(original_array)
+        original_arrays[i] = original_array
 
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
 
     # compute scaling factor for normalization
     gn = groupedNorm()
     if mode == "add":
-        gn.computeScaler(list_original_array)
+        gn.computeScaler(original_arrays, grouped_dim=grouped_dim)
     elif mode == "overwrite" or mode == "overwrite_perimeter":
         pass
     else:
@@ -116,22 +112,22 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
 
     # apply scaling
     if mode == "add":
-        grouped_normalized_array = gn.ApplyScaling(list_original_array, newshape=shape)
+        grouped_normalized_array = gn.ApplyScaling(original_arrays, newshape=(shape[1], shape[0]))
     elif mode == "overwrite" or mode == "overwrite_perimeter":
-        grouped_normalized_array = list_original_array
+        grouped_normalized_array = original_arrays
     else:
         raise ValueError
     colored_array = cm(grouped_normalized_array)
 
     if verbose > 0:
         print("")
-        print("number of groups: {0}".format(len(list_original_array)))
+        print("number of groups: {0}".format(len(original_arrays)))
         print("data_max: {0}".format(data_max))
         print("[Grouped] range:[{0}, {1}]".format(np.min(colored_array), np.max(colored_array)))
 
-    return list_original_array, list_grouped_normalized_array, colored_array
+    return original_arrays, list_grouped_normalized_array, colored_array
 
-def generatePatchedImage(list_patch_xy:list,
+def generatePatchedImage(list_patch_xy:np.array,
                          shape:tuple,
                          mode:str,
                          cmStr:str = "jet",
@@ -142,7 +138,7 @@ def generatePatchedImage(list_patch_xy:list,
 
     Parameters
     ----------
-    list_patch_xy : list of (x, y, cx, cy, alpha)
+    list_patch_xy : array of (x, y, cx, cy, alpha)
         specify locations of each patch.
         The range of x and cx must be within [0, height], and y and cy [0, width]
     shape : tuple of (width, height)
@@ -172,7 +168,7 @@ def generatePatchedImage(list_patch_xy:list,
     original_array = np.zeros(shape=(height, width), dtype=np.float)
     cm = plt.get_cmap(cmStr)
 
-    def _processPatch(patch:tuple):
+    def _processPatch(patch:np.array):
         x, y, cx, cy, alpha = patch
         x, y, cx, cy = int(x), int(y), int(cx), int(cy)
         # clipping

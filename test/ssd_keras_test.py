@@ -103,6 +103,9 @@ def test_inference(kerasSSD,
     cmStr = "jet"
 
     def transformCordinate(box, orgImage, img_width, img_height):
+        """
+        Transform the predicted bounding boxes for the 300x300 image to the original image dimensions.
+        """
         xmin = box[2] * orgImage.shape[1] / img_width
         ymin = box[3] * orgImage.shape[0] / img_height
         xmax = box[4] * orgImage.shape[1] / img_width
@@ -122,6 +125,7 @@ def test_inference(kerasSSD,
         #--------------------------------------------------------------------------
         y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
         y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
+        patched_per_images = np.zeros((1, len(classes), len(y_pred_thresh[0]), 5))
 
         np.set_printoptions(precision=2, suppress=True, linewidth=90)
         print("Predicted {0} boxes:\n".format(len(y_pred_thresh[0])))
@@ -135,25 +139,26 @@ def test_inference(kerasSSD,
             print("boxIndexPair: {0}".format(boxIndexPair))
             print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
 
-        patched_images = np.zeros((len(classes), len(y_pred_thresh[0]), 5))
-        pred_box_per_image = np.zeros((len(y_pred_thresh[0]), 6))
+        patched_per_layer = np.zeros((len(classes), len(y_pred_thresh[0]), 5))
+        pred_box_per_layer = np.zeros((len(y_pred_thresh[0]), 6))
         for target, class_name in enumerate(classes):
             # create confidence map
-            patches_per_image = np.zeros((len(y_pred_thresh[0]), 5))
+            patches_per_class = np.zeros((len(y_pred_thresh[0]), 5))
             for i, box in enumerate(y_pred_thresh[0]):
-                # Transform the predicted bounding boxes for the 300x300 image to the original image dimensions.
                 xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
                 if box[0] == target:
-                    patches_per_image[i] = np.array([int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]])
-            patched_images[target] = patches_per_image
+                    patches_per_class[i] = np.array([int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]])
+            patched_per_layer[target] = patches_per_class
 
             # create predicted result
             for i, box in enumerate(y_pred_original_thresh[0]):
                 xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
                 if box[0] == target:
-                    pred_box_per_image[i] = np.array((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
+                    pred_box_per_layer[i] = np.array((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
-        _, _, list_grouped_colored_array = generateNormalizedPatchedImage(patched_images,
+        patched_per_images[0] = patched_per_layer
+
+        _, _, list_grouped_colored_array = generateNormalizedPatchedImage(patched_per_layer,
                                                                           shape=(orig_image.shape[1], orig_image.shape[0]),
                                                                           mode=mode,
                                                                           verbose=verbose)
@@ -163,14 +168,14 @@ def test_inference(kerasSSD,
             class_name = classes[target]
             colored_array = np.reshape(colored_array[:,:,:orig_image.shape[2]], newshape=orig_image.shape)
             overlayed_array = (colored_array[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
-            for predicted_box in pred_box_per_image:
+            for predicted_box in pred_box_per_layer:
                 if predicted_box[5] == target:
                     rr, cc = rectangle_perimeter(start=(predicted_box[0], predicted_box[1]),
                                                 extent=(predicted_box[2], predicted_box[3]),
                                                 shape=(orig_image.shape[0], orig_image.shape[1]))
                     overlayed_array[rr, cc] = 255
             overlayed_img = Image.fromarray(overlayed_array)
-            for predicted_box in pred_box_per_image:
+            for predicted_box in pred_box_per_layer:
                 if target == predicted_box[5]:
                     ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
