@@ -157,11 +157,10 @@ def test_inference(kerasSSD,
                     pred_box_per_layer[i] = np.array((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
         patched_per_images[0] = patched_per_layer
-        print(patched_per_images.shape)
         _, _, list_grouped_colored_array = generateNormalizedPatchedImage(patched_per_layer,
                                                                           shape=(orig_image.shape[1], orig_image.shape[0]),
                                                                           mode=mode,
-                                                                          grouped_dim=2,
+                                                                          grouped_dim=1,
                                                                           verbose=verbose)
 
         for target, colored_array in enumerate(list_grouped_colored_array):

@@ -85,19 +85,19 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
     # note:
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
-    data_max = np.array([0], dtype=np.float32)
     original_arrays = np.zeros(list_grouped_patch_xy.shape[:grouped_dim]+ (shape[1], shape[0]))
-    list_grouped_normalized_array = list()
     cm = plt.get_cmap(cmStr)
 
     def _processGroup(i, group):
-        if verbose > 0:
-            print("--------------------")
-            print("{0} patches in group {1}:".format(len(group), i))
-        original_array = generatePatchedImage(group, shape, mode=mode,
-                                                            cmStr=cmStr,
-                                                            verbose=verbose)
-        original_arrays[i] = original_array
+        for indices in np.ndindex(group.shape[grouped_dim + 1:]):
+            if verbose > 0:
+                print("--------------------")
+                print("{0} patches in group {1}-{2}:".format(len(group), i, indices))
+            original_array = generatePatchedImage(group[indices], shape, mode=mode,
+                                                                cmStr=cmStr,
+                                                                verbose=verbose)
+
+            original_arrays[i][indices] = original_array
 
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
 
@@ -122,10 +122,10 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
     if verbose > 0:
         print("")
         print("number of groups: {0}".format(len(original_arrays)))
-        print("data_max: {0}".format(data_max))
+        print("data_max: {0}".format(gn.data_max))
         print("[Grouped] range:[{0}, {1}]".format(np.min(colored_array), np.max(colored_array)))
 
-    return original_arrays, list_grouped_normalized_array, colored_array
+    return original_arrays, grouped_normalized_array, colored_array
 
 def generatePatchedImage(patch_info:np.array,
                          shape:tuple,
