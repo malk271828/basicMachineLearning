@@ -38,7 +38,7 @@ class groupedNorm:
 
         GroupedArray: array, required
             Source array which to be normalized
-        deeper: boolean, optional
+        grouped_dim: int, optional
             If enabled, grouping axis get an additional dimension
         """
         for indices in np.ndindex(GroupedArray.shape[:grouped_dim]):
@@ -76,7 +76,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
                                    grouped_dim:int = 1,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
-                                   n_jobs:int = 1):
+                                   n_jobs:int = 1) -> tuple:
     """
     Return
     ------
@@ -86,7 +86,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
     data_max = np.array([0], dtype=np.float32)
-    original_arrays = np.zeros((list_grouped_patch_xy.shape[grouped_dim - 1],) + (shape[1], shape[0]))
+    original_arrays = np.zeros(list_grouped_patch_xy.shape[:grouped_dim]+ (shape[1], shape[0]))
     list_grouped_normalized_array = list()
     cm = plt.get_cmap(cmStr)
 
@@ -127,7 +127,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
 
     return original_arrays, list_grouped_normalized_array, colored_array
 
-def generatePatchedImage(list_patch_xy:np.array,
+def generatePatchedImage(patch_info:np.array,
                          shape:tuple,
                          mode:str,
                          cmStr:str = "jet",
@@ -138,7 +138,7 @@ def generatePatchedImage(list_patch_xy:np.array,
 
     Parameters
     ----------
-    list_patch_xy : array of (x, y, cx, cy, alpha)
+    patch_info : array of (x, y, cx, cy, alpha)
         specify locations of each patch.
         The range of x and cx must be within [0, height], and y and cy [0, width]
     shape : tuple of (width, height)
@@ -192,7 +192,7 @@ def generatePatchedImage(list_patch_xy:np.array,
         else:
             raise ValueError
 
-    Parallel(n_jobs=n_jobs, require='sharedmem')([delayed(_processPatch)(patch) for patch in sorted(list_patch_xy, key=itemgetter(4))])
+    Parallel(n_jobs=n_jobs, require='sharedmem')([delayed(_processPatch)(patch) for patch in sorted(patch_info, key=itemgetter(4))])
 
     if verbose > 0:
         print(Fore.CYAN)
