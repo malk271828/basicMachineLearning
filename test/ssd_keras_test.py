@@ -163,7 +163,7 @@ def test_inference(kerasSSD,
                                                                           grouped_dim=2,
                                                                           verbose=verbose)
 
-        for target, colored_array in enumerate(list_grouped_colored_array):
+        for target, colored_array in enumerate(list_grouped_colored_array[0]):
             # create output image
             class_name = classes[target]
             colored_array = np.reshape(colored_array[:,:,:orig_image.shape[2]], newshape=orig_image.shape)

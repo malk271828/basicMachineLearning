@@ -17,9 +17,10 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
 class groupedNorm:
-    def __init__(self):
+    def __init__(self, grouped_dim: int = 1):
         self.scaler = None
         self.data_max = -sys.maxsize
+        self.grouped_dim = grouped_dim
 
     def _fitScaler(self, array) -> MinMaxScaler:
         scaler = MinMaxScaler()
@@ -30,8 +31,7 @@ class groupedNorm:
 
     def computeScaler(self,
                       GroupedArray,
-                      grouped_dim: int = 1,
-                      verbose:int = 0) -> MinMaxScaler:
+                      verbose: int = 0) -> MinMaxScaler:
         """
         compute scaling factor without applying normalization.
         Groupding axis is the first dimension of 1st argument tensor.
@@ -41,7 +41,7 @@ class groupedNorm:
         grouped_dim: int, optional
             If enabled, grouping axis get an additional dimension
         """
-        for indices in np.ndindex(GroupedArray.shape[:grouped_dim]):
+        for indices in np.ndindex(GroupedArray.shape[:self.grouped_dim]):
             self._fitScaler(GroupedArray[indices])
 
         if verbose > 0:
@@ -51,20 +51,20 @@ class groupedNorm:
 
     def ApplyScaling(self,
                      GroupedArray,
-                     newshape:tuple,
-                     verbose:int = 0) -> np.array:
+                     newshape: tuple,
+                     verbose: int = 0) -> np.array:
         """
         Apply normalization with computed scaling factor
         """
         if self.scaler == None:
             raise Exception("before invoking this method")
         normalizedArray = GroupedArray.copy()
-        for i, array in enumerate(GroupedArray):
-            normalized_flattened_array = self.scaler.transform(np.reshape(array, newshape=(-1, 1)))
+        for indices in np.ndindex(normalizedArray.shape[:self.grouped_dim]):
+            normalized_flattened_array = self.scaler.transform(np.reshape(normalizedArray[indices], newshape=(-1, 1)))
             if newshape == None:
                 length = int(math.sqrt(len(normalized_flattened_array)))
                 newshape = (length, length)
-            normalizedArray[i] = np.reshape(normalized_flattened_array, newshape=newshape)
+            normalizedArray[indices] = np.reshape(normalized_flattened_array, newshape=newshape)
         if verbose > 0:
             print("length:{0}".format(length))
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
@@ -93,9 +93,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
         for indices in np.ndindex(group.shape[:grouped_dim - 1]):
             if verbose > 0:
                 print("--------------------")
-                print("{0} patches in group {1}-{2}:".format(len(group), i, indices))
-            print(group.shape)
-            print(group[indices].shape)
+                print("{0} patches in group {1}-{2}:".format(len(group[i]), i, indices))
             original_array = generatePatchedImage(group[indices], shape, mode=mode,
                                                                 cmStr=cmStr,
                                                                 verbose=verbose)
@@ -105,9 +103,9 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
 
     # compute scaling factor for normalization
-    gn = groupedNorm()
+    gn = groupedNorm(grouped_dim=grouped_dim)
     if mode == "add":
-        gn.computeScaler(original_arrays, grouped_dim=grouped_dim)
+        gn.computeScaler(original_arrays)
     elif mode == "overwrite" or mode == "overwrite_perimeter":
         pass
     else:
