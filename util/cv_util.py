@@ -87,12 +87,15 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
     # it should be declared as list or numpy array
     original_arrays = np.zeros(list_grouped_patch_xy.shape[:grouped_dim]+ (shape[1], shape[0]))
     cm = plt.get_cmap(cmStr)
+    print(original_arrays.shape)
 
     def _processGroup(i, group):
-        for indices in np.ndindex(group.shape[grouped_dim + 1:]):
+        for indices in np.ndindex(group.shape[:grouped_dim - 1]):
             if verbose > 0:
                 print("--------------------")
                 print("{0} patches in group {1}-{2}:".format(len(group), i, indices))
+            print(group.shape)
+            print(group[indices].shape)
             original_array = generatePatchedImage(group[indices], shape, mode=mode,
                                                                 cmStr=cmStr,
                                                                 verbose=verbose)
