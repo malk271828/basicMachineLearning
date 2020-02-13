@@ -1,3 +1,4 @@
+import numpy as np
 import soundfile as sf
 import cv2
 
@@ -51,7 +52,6 @@ class landmarksExtractor(featureExtractor):
             if (cap.isOpened()== False):
                 print("Error opening video stream or file")
 
-            landmarks_list = list()
             idx_frame = 0
             # Read until video is completed
             while(cap.isOpened()):
@@ -67,7 +67,10 @@ class landmarksExtractor(featureExtractor):
                         # Make the prediction and transfom it to numpy array
                         landmarks = self.predictor(gray, rect)
                         landmarks = face_utils.shape_to_np(landmarks)
-                        landmarks_list.append(landmarks - landmarks[self.DLIB_CENTER_INDEX])
+                        if "landmarks_frames" in locals():
+                            landmarks_frames = np.concatenate([landmarks_frames, landmarks - landmarks[self.DLIB_CENTER_INDEX]], axis=1)
+                        else:
+                            landmarks_frames = landmarks - landmarks[self.DLIB_CENTER_INDEX]
 
                         # Draw on our image, all the finded cordinate points (x,y)
                         if verbose > 0:
@@ -98,7 +101,7 @@ class landmarksExtractor(featureExtractor):
             # Closes all the frames
             cv2.destroyAllWindows()
 
-            return landmarks_list
+            return landmarks_frames
 
         elif modality == "audio":
             data, samplerate = sf.read(fileName)
