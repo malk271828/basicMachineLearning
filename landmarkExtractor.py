@@ -68,9 +68,13 @@ class landmarksExtractor(featureExtractor):
                         landmarks = self.predictor(gray, rect)
                         landmarks = face_utils.shape_to_np(landmarks)
                         if "landmarks_frames" in locals():
-                            landmarks_frames = np.concatenate([landmarks_frames, landmarks - landmarks[self.DLIB_CENTER_INDEX]], axis=1)
+                            next_frame = np.expand_dims(landmarks - landmarks[self.DLIB_CENTER_INDEX], 0)
+                            landmarks_frames = np.concatenate([landmarks_frames, next_frame], axis=0)
+                            assert next_frame.shape == firstframe_shape
                         else:
                             landmarks_frames = landmarks - landmarks[self.DLIB_CENTER_INDEX]
+                            landmarks_frames = np.expand_dims(landmarks_frames, 0)
+                            firstframe_shape = landmarks_frames.shape
 
                         # Draw on our image, all the finded cordinate points (x,y)
                         if verbose > 0:
