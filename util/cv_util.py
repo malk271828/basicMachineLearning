@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 # Machine Learning Libraries
 from sklearn.preprocessing import MinMaxScaler
 
-class groupedNorm:
+class groupedMinMaxScaler:
     def __init__(self, grouped_dim: int = 1):
         self.scaler = None
         self.data_max = -sys.maxsize
@@ -70,13 +70,13 @@ class groupedNorm:
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
         return normalizedArray
 
-def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
+def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
                                    shape:tuple,
                                    mode:str,
                                    grouped_dim:int = 1,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
-                                   n_jobs:int = 1) -> tuple:
+                                   n_jobs:int = 2) -> tuple:
     """
     Return
     ------
@@ -85,27 +85,32 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
     # note:
     # To access shared variables from an inter function to be paralleled,
     # it should be declared as list or numpy array
-    original_arrays = np.zeros(list_grouped_patch_xy.shape[:grouped_dim]+ (shape[1], shape[0]))
+    list_original_arrays = [0] * len(list_grouped_patch_xy)
     cm = plt.get_cmap(cmStr)
-    print(original_arrays.shape)
 
     def _processGroup(i, group):
+        original_array_per_layer = np.zeros((len(group),) + (shape[1], shape[0]))
         for indices in np.ndindex(group.shape[:grouped_dim - 1]):
             if verbose > 0:
                 print("--------------------")
-                print("{0} patches in group {1}-{2}:".format(len(group[i]), i, indices))
+                print("{0} patches in group {1}-{2}:".format(len(group), i, indices))
             original_array = generatePatchedImage(group[indices], shape, mode=mode,
                                                                 cmStr=cmStr,
                                                                 verbose=verbose)
 
-            original_arrays[i][indices] = original_array
+            original_array_per_layer[indices] = original_array
+        list_original_arrays[i] = original_array_per_layer
 
     Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
 
+    if verbose > 0:
+        print("list_grouped_patch_xy.shape: {0}".format((len(list_grouped_patch_xy),) + list_grouped_patch_xy[0].shape))
+        print("list_original_arrays.shape: {0}".format((len(list_original_arrays),) + list_original_arrays[0].shape))
+
     # compute scaling factor for normalization
-    gn = groupedNorm(grouped_dim=grouped_dim)
+    gn = groupedMinMaxScaler(grouped_dim=grouped_dim - 1)
     if mode == "add":
-        gn.computeScaler(original_arrays)
+        [gn.computeScaler(array) for array in list_original_arrays]
     elif mode == "overwrite" or mode == "overwrite_perimeter":
         pass
     else:
@@ -113,20 +118,20 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:np.array,
 
     # apply scaling
     if mode == "add":
-        grouped_normalized_array = gn.ApplyScaling(original_arrays, newshape=(shape[1], shape[0]))
+        grouped_normalized_array = [gn.ApplyScaling(array, newshape=(shape[1], shape[0])) for array in list_original_arrays]
     elif mode == "overwrite" or mode == "overwrite_perimeter":
-        grouped_normalized_array = original_arrays
+        grouped_normalized_array = list_original_arrays
     else:
         raise ValueError
     colored_array = cm(grouped_normalized_array)
 
     if verbose > 0:
         print("")
-        print("number of groups: {0}".format(len(original_arrays)))
+        print("number of groups: {0}".format(len(list_original_arrays)))
         print("data_max: {0}".format(gn.data_max))
         print("[Grouped] range:[{0}, {1}]".format(np.min(colored_array), np.max(colored_array)))
 
-    return original_arrays, grouped_normalized_array, colored_array
+    return list_original_arrays, grouped_normalized_array, colored_array
 
 def generatePatchedImage(patch_info:np.array,
                          shape:tuple,

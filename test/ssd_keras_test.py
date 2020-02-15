@@ -41,14 +41,14 @@ from lombardFileSelector import *
 
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
-@pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
+@pytest.mark.parametrize("mode", ["add"])
 def test_inference(kerasSSD,
                    visualization,
                    target_layer_names,
                    mode):
     verbose = 1
 
-    model, classes, _, gn, param = kerasSSD
+    model, classes, _, param = kerasSSD
     entry = param["entry"]
     layer_shape = [model.get_layer(layer_name).input_shape[1:3] for layer_name in target_layer_names]
     outDBoxNums = [model.get_layer(layer_name).output_shape[1] for layer_name in target_layer_names[1:]]
@@ -114,74 +114,74 @@ def test_inference(kerasSSD,
         return xmin, ymin, xmax, ymax
 
     for idx_image, orig_image in enumerate(orig_images[entry:entry+1]):
-        target_layer = param["target_layer"]
-        hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
+        patched_per_images = list()
+        for target_layer in param["target_layers"]:
+            hidden_layer_models = Model(inputs=model.input, outputs=model.get_layer(target_layer_names[0]).output)
 
-        list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,slice(*boxIndexPair[target_layer]),:], **decode_param)), y_pred_encoded))
+            list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,slice(*boxIndexPair[target_layer]),:], **decode_param)), y_pred_encoded))
 
 
-        #--------------------------------------------------------------------------
-        # Filtering
-        #--------------------------------------------------------------------------
-        y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
-        y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
-        patched_per_images = np.zeros((1, len(classes), len(y_pred_thresh[0]), 5))
+            #--------------------------------------------------------------------------
+            # Filtering
+            #--------------------------------------------------------------------------
+            y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
+            y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
 
-        np.set_printoptions(precision=2, suppress=True, linewidth=90)
-        print("Predicted {0} boxes:\n".format(len(y_pred_thresh[0])))
-        print('   class   conf xmin   ymin   xmax   ymax')
-        print(y_pred_thresh[0])
+            np.set_printoptions(precision=2, suppress=True, linewidth=90)
+            print("Predicted {0} boxes:\n".format(len(y_pred_thresh[0])))
+            print('   class   conf xmin   ymin   xmax   ymax')
+            print(y_pred_thresh[0])
 
-        if verbose > 0:
-            print(Fore.GREEN + "orig_image:{0}".format(img_paths[entry]))
-            print("target layer name: {0}".format(target_layer_names[target_layer]))
-            print("layer_shape: {0}".format(layer_shape))
-            print("boxIndexPair: {0}".format(boxIndexPair))
-            print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
+            if verbose > 0:
+                print(Fore.GREEN + "orig_image:{0}".format(img_paths[entry]))
+                print("target layer name: {0}".format(target_layer_names[target_layer]))
+                print("layer_shape: {0}".format(layer_shape))
+                print("boxIndexPair: {0}".format(boxIndexPair))
+                print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
 
-        patched_per_layer = np.zeros((len(classes), len(y_pred_thresh[0]), 5))
-        pred_box_per_layer = np.zeros((len(y_pred_thresh[0]), 6))
-        for target, class_name in enumerate(classes):
-            # create confidence map
-            patches_per_class = np.zeros((len(y_pred_thresh[0]), 5))
-            for i, box in enumerate(y_pred_thresh[0]):
-                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
-                if box[0] == target:
-                    patches_per_class[i] = np.array([int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]])
-            patched_per_layer[target] = patches_per_class
+            patched_per_layer = np.zeros((len(classes), len(y_pred_thresh[0]), 5))
+            pred_box_per_layer = np.zeros((len(y_pred_thresh[0]), 6))
+            for target, class_name in enumerate(classes):
+                # create confidence map
+                patches_per_class = np.zeros((len(y_pred_thresh[0]), 5))
+                for i, box in enumerate(y_pred_thresh[0]):
+                    xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
+                    if box[0] == target:
+                        patches_per_class[i] = np.array([int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1]])
+                patched_per_layer[target] = patches_per_class
 
-            # create predicted result
-            for i, box in enumerate(y_pred_original_thresh[0]):
-                xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
-                if box[0] == target:
-                    pred_box_per_layer[i] = np.array((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
+                # create predicted result
+                for i, box in enumerate(y_pred_original_thresh[0]):
+                    xmin, ymin, xmax, ymax = transformCordinate(box, orig_image, layer_shape[0][0], layer_shape[0][1])
+                    if box[0] == target:
+                        pred_box_per_layer[i] = np.array((int(ymin), int(xmin), int(ymax-ymin), int(xmax-xmin), box[1], target))
 
-        patched_per_images[0] = patched_per_layer
+            patched_per_images.append(patched_per_layer)
         _, _, list_grouped_colored_array = generateNormalizedPatchedImage(patched_per_images,
-                                                                          shape=(orig_image.shape[1], orig_image.shape[0]),
-                                                                          mode=mode,
-                                                                          grouped_dim=2,
-                                                                          verbose=verbose)
+                                                                        shape=(orig_image.shape[1], orig_image.shape[0]),
+                                                                        mode=mode,
+                                                                        grouped_dim=2,
+                                                                        verbose=verbose)
+        for target_layer, list_grouped_colored_array_per_layer in zip(param["target_layers"], list_grouped_colored_array):
+            for target, colored_array in enumerate(list_grouped_colored_array_per_layer):
+                # create output image
+                class_name = classes[target]
+                colored_array = np.reshape(colored_array[:,:,:orig_image.shape[2]], newshape=orig_image.shape)
+                overlayed_array = (colored_array[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
+                for predicted_box in pred_box_per_layer:
+                    if predicted_box[5] == target:
+                        rr, cc = rectangle_perimeter(start=(predicted_box[0], predicted_box[1]),
+                                                    extent=(predicted_box[2], predicted_box[3]),
+                                                    shape=(orig_image.shape[0], orig_image.shape[1]))
+                        overlayed_array[rr, cc] = 255
+                overlayed_img = Image.fromarray(overlayed_array)
+                for predicted_box in pred_box_per_layer:
+                    if target == predicted_box[5]:
+                        ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
-        for target, colored_array in enumerate(list_grouped_colored_array[0]):
-            # create output image
-            class_name = classes[target]
-            colored_array = np.reshape(colored_array[:,:,:orig_image.shape[2]], newshape=orig_image.shape)
-            overlayed_array = (colored_array[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
-            for predicted_box in pred_box_per_layer:
-                if predicted_box[5] == target:
-                    rr, cc = rectangle_perimeter(start=(predicted_box[0], predicted_box[1]),
-                                                extent=(predicted_box[2], predicted_box[3]),
-                                                shape=(orig_image.shape[0], orig_image.shape[1]))
-                    overlayed_array[rr, cc] = 255
-            overlayed_img = Image.fromarray(overlayed_array)
-            for predicted_box in pred_box_per_layer:
-                if target == predicted_box[5]:
-                    ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
-
-            # create output path and directory
-            visualization.createOutDir(img_path=img_paths[entry], mode=mode, target_layer_name=target_layer_names[target_layer])
-            overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + "_overlayed.bmp")
+                # create output path and directory
+                visualization.createOutDir(img_path=img_paths[entry], mode=mode, target_layer_name=target_layer_names[target_layer])
+                overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + "overlayed.bmp")
 
 def test_grad(kerasSSD,
               visualization):
