@@ -17,7 +17,21 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
 class groupedMinMaxScaler:
+    """
+    Grouped MinMaxScaler
+
+    Reference
+    ---------
+    https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html
+    """
     def __init__(self, grouped_dim: int = 1):
+        """
+        Constructor
+
+        grouped_dim: int, optional
+            specify axes used for grouping with left dimension normalized by MinMaxScaling.
+            To get more detail, see method description of computeScaler().
+        """
         self.scaler = None
         self.data_max = -sys.maxsize
         self.grouped_dim = grouped_dim
@@ -34,12 +48,11 @@ class groupedMinMaxScaler:
                       verbose: int = 0) -> MinMaxScaler:
         """
         compute scaling factor without applying normalization.
-        Groupding axis is the first dimension of 1st argument tensor.
+        Groupding axes are specified by grouped_dim.
+        e.g. If grouped_dim = 2, looping iterator will traverse for [:,:,...]
 
         GroupedArray: array, required
             Source array which to be normalized
-        grouped_dim: int, optional
-            If enabled, grouping axis get an additional dimension
         """
         for indices in np.ndindex(GroupedArray.shape[:self.grouped_dim]):
             self._fitScaler(GroupedArray[indices])
@@ -128,7 +141,8 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
     if verbose > 0:
         print("")
         print("number of groups: {0}".format(len(list_original_arrays)))
-        print("data_max: {0}".format(gn.data_max))
+        if mode == "add":
+            print("data_max: {0}".format(gn.data_max))
         print("[Grouped] range:[{0}, {1}]".format(np.min(colored_array), np.max(colored_array)))
 
     return list_original_arrays, grouped_normalized_array, colored_array
@@ -172,7 +186,6 @@ def generatePatchedImage(patch_info:np.array,
     """
     width, height = shape
     original_array = np.zeros(shape=(height, width), dtype=np.float)
-    cm = plt.get_cmap(cmStr)
 
     def _processPatch(patch:np.array):
         x, y, cx, cy, alpha = patch
@@ -203,10 +216,6 @@ def generatePatchedImage(patch_info:np.array,
     if verbose > 0:
         print(Fore.CYAN)
         print("[Original] shape: {0} range:[{1}, {2}]".format(original_array.shape, np.min(original_array), np.max(original_array)))
-        if "normalized_array" in locals():
-            print("[Normalized] shape: {0} range:[{1}, {2}]".format(normalized_array.shape, np.min(normalized_array), np.max(normalized_array)))
-        if "colored_array" in locals():
-            print("[Colored] shape: {0} range:[{1}, {2}]".format(colored_array.shape, np.min(colored_array), np.max(colored_array)))
         print(Style.RESET_ALL)
         if verbose > 1:
             VIS_DIR = "visualization/"
@@ -214,15 +223,5 @@ def generatePatchedImage(patch_info:np.array,
 
             # output original
             Image.fromarray(original_array).convert("L").save(VIS_DIR + 'original.gif', quality=95)
-
-            # output normalized
-            if "normalized_array" in locals():
-                normalized_image = Image.fromarray(normalized_array*255)
-                normalized_image.save(VIS_DIR + 'normalized.gif', quality=95)
-
-            # output colored
-            if "colored_array" in locals():
-                colored_image = Image.fromarray((colored_array*255).astype(np.uint8))
-                colored_image.save(VIS_DIR + "colored_" + cmStr + ".png", quality=95)
 
     return original_array

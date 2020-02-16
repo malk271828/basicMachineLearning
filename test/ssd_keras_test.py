@@ -41,7 +41,7 @@ from lombardFileSelector import *
 
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
-@pytest.mark.parametrize("mode", ["add"])
+@pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
 def test_inference(kerasSSD,
                    visualization,
                    target_layer_names,
