@@ -34,6 +34,7 @@ keras = "~=2.1.3"
 tensorflow = "~=1.13.0"
 matplotlib = "*"
 soundfile = "*"
+pylint = "*"
 
 [requires]
 python_version = "3.5"

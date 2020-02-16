@@ -186,8 +186,9 @@ def test_inference(kerasSSD,
 def test_grad(kerasSSD,
               visualization):
     # load component from fixture
-    model, classes, target_layer_names, gn, param = kerasSSD
-    target_layer, entry = param["target_layer"], param["entry"]
+    model, classes, target_layer_names, param = kerasSSD
+    target_layer, entry = param["target_layers"], param["entry"]
+    gmms = groupedMinMaxScaler()
 
     IMG_DIR = "examples/"
     mode = "gradcam"
@@ -202,17 +203,19 @@ def test_grad(kerasSSD,
                                 target_layer_name=target_layer_names[target_layer])
 
     # create class activation map
-    GroupedCam = list()
     for target in range(len(classes)):
         pred_y = model.predict(preprocessed_input)
         cam = gradcam( model, preprocessed_input, target, target_layer_names[target_layer],
                             verbose=0,
                             pred_y=pred_y)
-        GroupedCam.append(cam)
+        if "GroupedCam" in locals():
+            GroupedCam = np.concatenate([GroupedCam, np.expand_dims(cam, axis=0)], axis=0)
+        else:
+            GroupedCam = np.expand_dims(cam, axis=0)
 
     # compute normalizing factor
-    gn.computeScaler(GroupedCam, verbose=1)
-    GroupedCam = gn.ApplyScaling(GroupedCam, verbose=1)
+    gmms.computeScaler(GroupedCam, verbose=1)
+    GroupedCam = gmms.ApplyScaling(GroupedCam, newshape=cam.shape, verbose=1)
 
     # apply scaling and save figure
     for target, cam in enumerate(GroupedCam):

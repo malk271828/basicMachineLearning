@@ -79,7 +79,6 @@ class groupedMinMaxScaler:
                 newshape = (length, length)
             normalizedArray[indices] = np.reshape(normalized_flattened_array, newshape=newshape)
         if verbose > 0:
-            print("length:{0}".format(length))
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
         return normalizedArray
 
