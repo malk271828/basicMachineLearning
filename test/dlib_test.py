@@ -67,7 +67,7 @@ def test_landmarks(expFixture, modal):
                               verbose=2,
                               modality=modal)
     assert 0 != len(landmarks_list)
-    print(landmarks_list)
+    print(getShapeListArray(landmarks_list))
 
     # specifying cache path
     le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
@@ -75,29 +75,31 @@ def test_landmarks(expFixture, modal):
                               verbose=2,
                               modality=modal)
     assert 0 != len(landmarks_list)
-    print(landmarks_list)
+    print(getShapeListArray(landmarks_list))
 
 @pytest.mark.landmark
 @pytest.mark.parametrize("modal", ["visual", "audio"])
-@pytest.mark.parametrize("file_squeeze", [False])
+@pytest.mark.parametrize("file_squeeze", [False, True])
 def test_batch( expFixture,
                 modal,
                 file_squeeze):
     fileSelector = expFixture.fileSelector
 
-    be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH))
+    be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
+                        file_squeeze=file_squeeze)
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
-                file_squeeze=file_squeeze,
                 verbose=2,
                 modality=modal)
+    print(getShapeListArray(X))
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
-                file_squeeze=file_squeeze,
                 verbose=2,
                 modality=modal)
+    print(getShapeListArray(X))
 
     if modal == "visual":
         if file_squeeze:
-            pass
+            assert X[0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+            assert X[0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
         else:
             assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
             assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0

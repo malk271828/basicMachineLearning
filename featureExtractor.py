@@ -82,22 +82,33 @@ def padStack(a):
 class batchExtractor(featureExtractor):
     """
     Decorator pattern batchExtractor
+
     """
+    DEFAULT_CACHE_PATH = "./cache/"
+    DEFAULT_CACHE_EXT = ".npz"
+
     def __init__(self,
-                 singleFileExtractor:featureExtractor):
-        super().__init__()
+                 singleFileExtractor:featureExtractor,
+                 cache_dir:str = DEFAULT_CACHE_PATH,
+                 file_squeeze:bool = False):
+        """
+        file_squeeze: boolean, optional
+            If enabled, all the features of selected files will be concatenated.
+            This flag is NOT saved into cache file, thus client codes have to 
+            manage whether loaded cache data have file dimension by your own.
+        """
+        super().__init__(cache_dir)
         self.singleFileExtractor = singleFileExtractor
+        self.file_squeeze = file_squeeze
 
     def getX(self,
              filePathList:list,
              modality:str = "",
-             file_squeeze:bool = True,
              verbose:int = 0,
              **kwargs):
         concatPath = "".join(filePathList)
         self.concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
         self.filePathList = filePathList
-        self.file_squeeze = file_squeeze
 
         return super().getX(fileName=self.concatCachePath,
                             modality=modality,
@@ -123,10 +134,11 @@ class batchExtractor(featureExtractor):
         if self.file_squeeze:
             for sample in samples:
                 if "return_samples" in locals():
-                    np.concatenate([return_samples, sample], axis=0)
+                    return_samples = np.concatenate([return_samples, sample], axis=0)
                 else:
                     return_samples = sample
-
-            #samples = np.reshape(samples, newshape=(-1,) + (np.prod(samples.shape[1:]),))
-
+                    print(sample.shape)
+            samples = return_samples
+        if "return_samples" in locals():
+            del return_samples
         return samples

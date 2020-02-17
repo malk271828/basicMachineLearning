@@ -8,6 +8,9 @@ from imutils import face_utils
 
 from featureExtractor import featureExtractor
 
+def getShapeListArray(list_array):
+    return (len(list_array),) + list_array[0].shape
+
 class landmarksExtractor(featureExtractor):
     """
     Reference
