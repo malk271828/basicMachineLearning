@@ -1,4 +1,5 @@
 import os
+import shutil
 from os.path import splitext, basename, exists
 import numpy as np
 from datetime import datetime
@@ -41,6 +42,10 @@ class featureExtractor():
                     features_list: list,
                     verbose:int = 0):
         np.savez(self.cachePath, features=features_list, allow_pickle=True)
+
+    def clearCache(self):
+        if exists(self.cache_dir):
+            shutil.rmtree(self.cache_dir)
 
     def getX(self,
              fileName:str,

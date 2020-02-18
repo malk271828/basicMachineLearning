@@ -87,10 +87,7 @@ def test_batch( expFixture,
 
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
                         file_squeeze=file_squeeze)
-    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
-                verbose=2,
-                modality=modal)
-    print(getShapeListArray(X))
+    be.clearCache()
     X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
                 verbose=2,
                 modality=modal)
