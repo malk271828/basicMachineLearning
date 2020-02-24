@@ -194,8 +194,9 @@ def test_grad(kerasSSD,
     mode = "gradcam"
 
     img_path = fileSelector(IMG_DIR).getFileList()[entry]
-    orig_image = image.img_to_array(image.load_img(img_path, target_size=(300, 300)))
-    preprocessed_input = np.expand_dims(orig_image, axis=0)
+    orig_image = image.img_to_array(image.load_img(img_path))
+    resized_image = cv2.resize(orig_image, model.input_shape[1:3], cv2.INTER_LINEAR)
+    preprocessed_input = np.expand_dims(resized_image, axis=0)
 
     # create output directory
     visualization.createOutDir( img_path=img_path,
@@ -203,11 +204,10 @@ def test_grad(kerasSSD,
                                 target_layer_name=target_layer_names[target_layer])
 
     # create class activation map
-    for target in range(len(classes)):
-        pred_y = model.predict(preprocessed_input)
+    for target in np.arange(0, len(classes)):
+        #pred_y = model.predict(preprocessed_input)
         cam = gradcam( model, preprocessed_input, target, target_layer_names[target_layer],
-                            verbose=0,
-                            pred_y=pred_y)
+                            verbose=0)
         if "GroupedCam" in locals():
             GroupedCam = np.concatenate([GroupedCam, np.expand_dims(cam, axis=0)], axis=0)
         else:
@@ -220,6 +220,7 @@ def test_grad(kerasSSD,
     # apply scaling and save figure
     for target, cam in enumerate(GroupedCam):
         jetcam = visualization.cm(cam)
-        overlayed_array = (jetcam[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
+        jetcam_resized = cv2.resize(jetcam, (orig_image.shape[1], orig_image.shape[0]), cv2.INTER_LINEAR)
+        overlayed_array = (jetcam_resized[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
         overlayed_img = Image.fromarray(overlayed_array)
         overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, classes[target]) + "gradcam.jpg")

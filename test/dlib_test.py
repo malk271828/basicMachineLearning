@@ -83,6 +83,11 @@ def test_landmarks(expFixture, modal):
 def test_batch( expFixture,
                 modal,
                 file_squeeze):
+    """
+    Caution
+    -------
+    This test delete cache directory.
+    """
     fileSelector = expFixture.fileSelector
 
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
