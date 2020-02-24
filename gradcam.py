@@ -10,6 +10,8 @@ from keras import backend as K
 from keras.models import load_model, Model
 import tensorflow as tf
 
+from colorama import *
+
 def gradcam(input_model,
              image: np.array,
              cls: int,
@@ -51,7 +53,7 @@ def gradcam(input_model,
     cam[0][0] = 0
 
     if verbose > 0:
-        print("cls:{0}".format(cls))
+        print(Fore.CYAN + "cls:{0} layer_name:{1}".format(cls, layer_name) + Style.RESET_ALL)
         print("shape of y_c:{0}".format(y_c.get_shape()))
         print("shape of conv_output:{0}".format(conv_output.get_shape()))
         print("shape of cam:{0}".format(cam.shape))
