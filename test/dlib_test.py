@@ -63,7 +63,7 @@ def test_landmarks(expFixture, modal):
 
     # w/o specifying cache path
     le1 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
-    landmarks_list = le1.getX(fileName=fileSelector.getFileList(modal)[0],
+    landmarks_list = le1.getXy(fileName=fileSelector.getFileList(modal)[0],
                               verbose=2,
                               modality=modal)
     assert 0 != len(landmarks_list)
@@ -71,7 +71,7 @@ def test_landmarks(expFixture, modal):
 
     # specifying cache path
     le2 = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH, cache_dir="./cache2/", visualize_window=True)
-    landmarks_list = le2.getX(fileName=fileSelector.getFileList(modal)[0],
+    landmarks_list = le2.getXy(fileName=fileSelector.getFileList(modal)[0],
                               verbose=2,
                               modality=modal)
     assert 0 != len(landmarks_list)
@@ -93,7 +93,7 @@ def test_batch( expFixture,
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
                         file_squeeze=file_squeeze)
     be.clearCache()
-    X = be.getX(filePathList=fileSelector.getFileList(modal)[:10],
+    X = be.getXy(filePathList=fileSelector.getFileList(modal)[:10],
                 verbose=2,
                 modality=modal)
     print(getShapeListArray(X))

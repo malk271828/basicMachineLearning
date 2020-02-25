@@ -47,7 +47,10 @@ class featureExtractor():
         if exists(self.cache_dir):
             shutil.rmtree(self.cache_dir)
 
-    def getX(self,
+    def getDim(self):
+        pass
+
+    def getXy(self,
              fileName:str,
              modality:str = "",
              verbose:int = 0,
@@ -106,7 +109,7 @@ class batchExtractor(featureExtractor):
         self.singleFileExtractor = singleFileExtractor
         self.file_squeeze = file_squeeze
 
-    def getX(self,
+    def getXy(self,
              filePathList:list,
              modality:str = "",
              verbose:int = 0,
@@ -115,7 +118,7 @@ class batchExtractor(featureExtractor):
         self.concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
         self.filePathList = filePathList
 
-        return super().getX(fileName=self.concatCachePath,
+        return super().getXy(fileName=self.concatCachePath,
                             modality=modality,
                             **kwargs)
 
@@ -131,7 +134,7 @@ class batchExtractor(featureExtractor):
             fileListIterator = self.filePathList
         samples = list()
         for filePath in fileListIterator:
-            features = self.singleFileExtractor.getX(fileName=filePath,
+            features = self.singleFileExtractor.getXy(fileName=filePath,
                                                      modality=modality,
                                                      verbose=verbose)
             samples.append(features)
