@@ -35,6 +35,8 @@ def visualization():
             if not os.path.exists(self.output_dir):
                 os.makedirs(self.output_dir)
                 print(Fore.CYAN + "create dir:{0}".format(self.output_dir) + Style.RESET_ALL)
+            else:
+                print(Fore.GREEN + "check dir:{0}".format(self.output_dir) + Style.RESET_ALL)
 
     return _visualization()
 

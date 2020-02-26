@@ -187,8 +187,7 @@ def test_grad(kerasSSD,
               visualization):
     # load component from fixture
     model, classes, target_layer_names, param = kerasSSD
-    target_layer, entry = param["target_layers"], param["entry"]
-    gmms = groupedMinMaxScaler()
+    entry = param["entry"]
 
     IMG_DIR = "examples/"
     mode = "gradcam"
@@ -198,29 +197,34 @@ def test_grad(kerasSSD,
     resized_image = cv2.resize(orig_image, model.input_shape[1:3], cv2.INTER_LINEAR)
     preprocessed_input = np.expand_dims(resized_image, axis=0)
 
-    # create output directory
-    visualization.createOutDir( img_path=img_path,
-                                mode=mode,
-                                target_layer_name=target_layer_names[target_layer])
-
     # create class activation map
-    for target in np.arange(0, len(classes)):
-        #pred_y = model.predict(preprocessed_input)
-        cam = gradcam( model, preprocessed_input, target, target_layer_names[target_layer],
-                            verbose=0)
-        if "GroupedCam" in locals():
-            GroupedCam = np.concatenate([GroupedCam, np.expand_dims(cam, axis=0)], axis=0)
-        else:
-            GroupedCam = np.expand_dims(cam, axis=0)
+    GroupedCam_per_image = list()
+    for target_layer in param["target_layers"]:
+        for target in np.arange(0, len(classes)):
+            #pred_y = model.predict(preprocessed_input)
+            cam = gradcam( model, preprocessed_input, target, target_layer_names[target_layer],
+                                verbose=0)
+            if "GroupedCam" in locals():
+                GroupedCam = np.concatenate([GroupedCam, np.expand_dims(cam, axis=0)], axis=0)
+            else:
+                GroupedCam = np.expand_dims(cam, axis=0)
+        GroupedCam_per_image.append(GroupedCam)
+        del GroupedCam
 
     # compute normalizing factor
-    gmms.computeScaler(GroupedCam, verbose=1)
-    GroupedCam = gmms.ApplyScaling(GroupedCam, newshape=cam.shape, verbose=1)
+    gmms = groupedMinMaxScaler(grouped_dim=1)
+    [gmms.computeScaler(GroupedCam, verbose=1) for GroupedCam in GroupedCam_per_image]
+    GroupedCam = [gmms.ApplyScaling(GroupedCam, newshape=cam.shape, verbose=1) for GroupedCam in GroupedCam_per_image]
 
     # apply scaling and save figure
-    for target, cam in enumerate(GroupedCam):
-        jetcam = visualization.cm(cam)
-        jetcam_resized = cv2.resize(jetcam, (orig_image.shape[1], orig_image.shape[0]), cv2.INTER_LINEAR)
-        overlayed_array = (jetcam_resized[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
-        overlayed_img = Image.fromarray(overlayed_array)
-        overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, classes[target]) + "gradcam.jpg")
+    for target_layer, GroupedCam in zip(param["target_layers"], GroupedCam_per_image):
+        # create output directory
+        visualization.createOutDir( img_path=img_path,
+                                    mode=mode,
+                                    target_layer_name=target_layer_names[target_layer])
+        for target, cam in enumerate(GroupedCam):
+            jetcam = visualization.cm(cam)
+            jetcam_resized = cv2.resize(jetcam, (orig_image.shape[1], orig_image.shape[0]), cv2.INTER_LINEAR)
+            overlayed_array = (jetcam_resized[:,:,:orig_image.shape[2]]*128+orig_image/2.0).astype(np.uint8)
+            overlayed_img = Image.fromarray(overlayed_array)
+            overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, classes[target]) + "gradcam.jpg")

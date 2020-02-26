@@ -52,6 +52,11 @@ def gradcam(input_model,
     # temporal workaround for grouped minmaxScaler
     cam[0][0] = 0
 
+    # for class independent normalization
+    # cam_max = cam.max()
+    # if cam_max != 0:
+    #     cam = cam / cam_max
+
     if verbose > 0:
         print(Fore.CYAN + "cls:{0} layer_name:{1}".format(cls, layer_name) + Style.RESET_ALL)
         print("shape of y_c:{0}".format(y_c.get_shape()))
