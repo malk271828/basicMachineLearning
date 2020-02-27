@@ -46,6 +46,22 @@ def test_inference(kerasSSD,
                    visualization,
                    target_layer_names,
                    mode):
+    """
+    Single Shot Detector model visualization test
+
+    Instructions:
+        1: git clone https://github.com/pierluigiferrari/ssd_keras to the same directory of this repogitory
+        2: Download pretrained keras model "ssd300_pascal_07+12_102k_steps.h5" from the link below
+            https://github.com/pierluigiferrari/ssd_keras/blob/master/training_summaries/ssd300_pascal_07+12_training_summary.md
+           Deploy it and check directory hierarchy:
+
+        ------
+             |---[ssd_keras]
+             |---[this repo]----- pretrained model(.h5)
+                             |--- [test] ------------ ssd_keras_test.py
+
+        3: execute by typing "pytest -s test/ssd_keras_test.py::test_inference -v -l"
+    """
     verbose = 1
 
     model, classes, _, param = kerasSSD

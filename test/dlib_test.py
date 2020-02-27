@@ -93,11 +93,12 @@ def test_batch( expFixture,
     be.clearCache()
     recipe = {
         "visual": fileSelector.getFileList("visual")[:10],
-        "audio": fileSelector.getFileList("audio")[:10],    
+        "audio": fileSelector.getFileList("audio")[:10],
     }
     X = be.getXy(recipe=recipe,
                  verbose=2)
-    #print(getShapeListArray(X))
+    print(getShapeListArray(X["audio"]))
+    print(getShapeListArray(X["visual"]))
 
     if file_squeeze:
         assert X["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
