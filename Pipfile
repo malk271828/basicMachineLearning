@@ -35,6 +35,11 @@ tensorflow = "~=1.13.0"
 matplotlib = "*"
 soundfile = "*"
 pylint = "*"
+h5py = "*"
+validators = "*"
+numpy = "*"
+argparse = "*"
+requests = "*"
 
 [requires]
 python_version = "3.5"

@@ -78,10 +78,8 @@ def test_landmarks(expFixture, modal):
     print(getShapeListArray(landmarks_list))
 
 @pytest.mark.landmark
-@pytest.mark.parametrize("modal", ["visual", "audio"])
 @pytest.mark.parametrize("file_squeeze", [False, True])
 def test_batch( expFixture,
-                modal,
                 file_squeeze):
     """
     Caution
@@ -93,20 +91,20 @@ def test_batch( expFixture,
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
                         file_squeeze=file_squeeze)
     be.clearCache()
-    X = be.getXy(filePathList=fileSelector.getFileList(modal)[:10],
-                verbose=2,
-                modality=modal)
-    print(getShapeListArray(X))
+    recipe = {
+        "visual": fileSelector.getFileList("visual")[:10],
+        "audio": fileSelector.getFileList("audio")[:10],    
+    }
+    X = be.getXy(recipe=recipe,
+                 verbose=2)
+    #print(getShapeListArray(X))
 
-    if modal == "visual":
-        if file_squeeze:
-            assert X[0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-            assert X[0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
-        else:
-            assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-            assert X[0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
+    if file_squeeze:
+        assert X["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+        assert X["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
     else:
-        assert len(X) != 0
+        assert X["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+        assert X["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")

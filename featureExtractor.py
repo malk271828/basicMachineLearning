@@ -110,28 +110,41 @@ class batchExtractor(featureExtractor):
         self.file_squeeze = file_squeeze
 
     def getXy(self,
-             filePathList:list,
-             modality:str = "",
-             verbose:int = 0,
-             **kwargs):
-        concatPath = "".join(filePathList)
-        self.concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
-        self.filePathList = filePathList
-
-        return super().getXy(fileName=self.concatCachePath,
-                            modality=modality,
-                            **kwargs)
+              recipe:dict(),
+              verbose:int = 0,
+              **kwargs):
+        """
+        recipe: dictionary, required
+            {
+                "visual": list of visual modality source files,
+                "audio": list of audio modality source files
+            }
+        """
+        for modality in recipe:
+            concatPath = "".join(recipe[modality])
+            self.concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(concatPath.encode()).hexdigest() + ".npz"
+            feat_single_modality = super().getXy(fileName=self.concatCachePath,
+                                                 modality=modality,
+                                                 filePathList=recipe[modality],
+                                                 **kwargs)
+            recipe[modality] = feat_single_modality
+        return recipe
 
     def _extractFeature(self,
                         fileName:str,
                         modality:str = "",
                         verbose:int = 0,
                         **kwargs):
+        # nullfy unused argument
+        del fileName
+        if "filePathList" not in kwargs.keys():
+            raise Exception("filePathList argument is required")
+
         # extract feature from each file
         if verbose > 0:
-            fileListIterator = tqdm(filePathList, ascii=True)
+            fileListIterator = tqdm(kwargs["filePathList"], ascii=True)
         else:
-            fileListIterator = self.filePathList
+            fileListIterator = kwargs["filePathList"]
         samples = list()
         for filePath in fileListIterator:
             features = self.singleFileExtractor.getXy(fileName=filePath,
