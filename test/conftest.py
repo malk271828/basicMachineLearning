@@ -5,14 +5,7 @@ sys.path.insert(0, "../keras-gradcam")
 
 import pytest
 from colorama import *
-init()
-
-# visualization
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-from util.cv_util import *
+init(autoreset=True)
 
 @pytest.fixture
 def visualization():
@@ -34,9 +27,9 @@ def visualization():
                 self.output_dir = self.VIS_DIR + os.path.splitext(os.path.basename(kwargs["img_path"]))[0] + "_" + self.cmStr + "_" + kwargs["mode"] + "/"
             if not os.path.exists(self.output_dir):
                 os.makedirs(self.output_dir)
-                print(Fore.CYAN + "create dir:{0}".format(self.output_dir) + Style.RESET_ALL)
+                print(Fore.CYAN + "create dir:{0}".format(self.output_dir))
             else:
-                print(Fore.GREEN + "check dir:{0}".format(self.output_dir) + Style.RESET_ALL)
+                print(Fore.GREEN + "check dir:{0}".format(self.output_dir))
 
     return _visualization()
 

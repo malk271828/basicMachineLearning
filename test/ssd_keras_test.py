@@ -179,6 +179,7 @@ def test_inference(kerasSSD,
                                                                         grouped_dim=2,
                                                                         verbose=verbose)
         for target_layer, list_grouped_colored_array_per_layer in zip(param["target_layers"], list_grouped_colored_array):
+            visualization.createOutDir(img_path=img_paths[entry], mode=mode, target_layer_name=target_layer_names[target_layer])
             for target, colored_array in enumerate(list_grouped_colored_array_per_layer):
                 # create output image
                 class_name = classes[target]
@@ -196,7 +197,6 @@ def test_inference(kerasSSD,
                         ImageDraw.Draw(overlayed_img).text((predicted_box[1], predicted_box[0]), "{0}:{1:.3g}".format(class_name, predicted_box[4]))
 
                 # create output path and directory
-                visualization.createOutDir(img_path=img_paths[entry], mode=mode, target_layer_name=target_layer_names[target_layer])
                 overlayed_img.save(visualization.output_dir + "/group{0}_{1}_".format(target, class_name) + "overlayed.bmp")
 
 def test_grad(kerasSSD,
