@@ -23,6 +23,8 @@ import mlflow
 import mlflow.sklearn
 import mlflow.keras
 
+import librosa.display
+
 from featureExtractor import *
 from landmarkExtractor import *
 from lombardFileSelector import *
@@ -78,34 +80,46 @@ def test_landmarks(expFixture, modal):
     print(getShapeListArray(landmarks_list))
 
 @pytest.mark.landmark
-@pytest.mark.parametrize("file_squeeze", [False, True])
+@pytest.mark.parametrize("file_squeeze", [True])
+@pytest.mark.parametrize("use_cache", [False, True])
 def test_batch( expFixture,
-                file_squeeze):
+                file_squeeze,
+                use_cache):
     """
     Caution
     -------
-    This test delete cache directory.
+    - This test may delete cache directory.
+    - The information of file_squeeze flag is not stored into cache.
     """
     fileSelector = expFixture.fileSelector
 
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
                         file_squeeze=file_squeeze)
-    be.clearCache()
+    if not use_cache:
+        be.clearCache()
     recipe = {
         "visual": fileSelector.getFileList("visual")[:10],
         "audio": fileSelector.getFileList("audio")[:10],
     }
-    X = be.getXy(recipe=recipe,
+    Xy = be.getXy(recipe=recipe,
                  verbose=2)
-    print(getShapeListArray(X["audio"]))
-    print(getShapeListArray(X["visual"]))
+
+    for modality in recipe.keys():
+        if file_squeeze:
+            print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
+            plt.figure(figsize=(10, 4))
+            spec = np.concatenate([Xy["audio"].T, Xy["visual"][:,1].T*5], axis=0)
+            librosa.display.specshow(spec, x_axis='time')
+            plt.savefig("spec.png")
+        else:
+            print("modal:{0}[0] shape:{1}".format(modality, Xy[modality][0].shape))
 
     if file_squeeze:
-        assert X["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-        assert X["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
+        assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+        assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
     else:
-        assert X["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-        assert X["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
+        assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+        assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")

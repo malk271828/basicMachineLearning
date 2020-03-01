@@ -111,12 +111,7 @@ def test_inference(kerasSSD,
     confidence_threshold_original = 0.4
     confidence_threshold = 0.00
 
-
     # Display the image and draw the predicted boxes onto it.
-
-    # Set the colors for the bounding boxes
-    VIS_DIR = "visualization/"
-    cmStr = "jet"
 
     def transformCordinate(box, orgImage, img_width, img_height):
         """
@@ -136,7 +131,6 @@ def test_inference(kerasSSD,
 
             list_y_pred = list(map(lambda y: np.array(decode_detections(y[:,slice(*boxIndexPair[target_layer]),:], **decode_param)), y_pred_encoded))
 
-
             #--------------------------------------------------------------------------
             # Filtering
             #--------------------------------------------------------------------------
@@ -150,10 +144,10 @@ def test_inference(kerasSSD,
 
             if verbose > 0:
                 print(Fore.GREEN + "orig_image:{0}".format(img_paths[entry]))
-                print("target layer name: {0}".format(target_layer_names[target_layer]))
-                print("layer_shape: {0}".format(layer_shape))
-                print("boxIndexPair: {0}".format(boxIndexPair))
-                print("boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]) + Style.RESET_ALL)
+                print(Fore.GREEN + "target layer name: {0}".format(target_layer_names[target_layer]))
+                print(Fore.GREEN + "layer_shape: {0}".format(layer_shape))
+                print(Fore.GREEN + "boxIndexPair: {0}".format(boxIndexPair))
+                print(Fore.GREEN + "boxIndexPair[target_layer]: {0}".format(boxIndexPair[target_layer]))
 
             patched_per_layer = np.zeros((len(classes), len(y_pred_thresh[0]), 5))
             pred_box_per_layer = np.zeros((len(y_pred_thresh[0]), 6))

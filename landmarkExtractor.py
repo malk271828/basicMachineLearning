@@ -6,6 +6,9 @@ import cv2
 import dlib
 from imutils import face_utils
 
+# signal processing
+from librosa.feature import mfcc
+
 from featureExtractor import featureExtractor
 
 def getShapeListArray(list_array):
@@ -111,8 +114,12 @@ class landmarksExtractor(featureExtractor):
             return landmarks_frames
 
         elif modality == "audio":
-            data, samplerate = sf.read(fileName)
+            # FPS of video files is described in the original paper:
+            # https://asa.scitation.org/doi/10.1121/1.5042758
+            VIDEO_FPS = 23.93
+            signal, samplerate = sf.read(fileName)
+            mfccs = mfcc(y=signal, sr=samplerate, hop_length=int(samplerate/VIDEO_FPS))
 
-            return data
+            return mfccs.T
         else:
             raise Exception("modality argument must be passed to invoke this method")
