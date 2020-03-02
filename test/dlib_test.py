@@ -107,9 +107,16 @@ def test_batch( expFixture,
     for modality in recipe.keys():
         if file_squeeze:
             print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
-            plt.figure(figsize=(10, 4))
-            spec = np.concatenate([Xy["audio"].T, Xy["visual"][:,1].T*5], axis=0)
-            librosa.display.specshow(spec, x_axis='time')
+            plt.figure(figsize=(10, 6))
+            plt.subplot(2, 1, 1)
+            librosa.display.specshow(Xy["visual"][:, :, 1].T*5, x_axis="time")
+            plt.title('visual')
+            plt.colorbar()
+            plt.subplot(2, 1, 2)
+            librosa.display.specshow(Xy["audio"].T, x_axis="time")
+            plt.title('audio')
+            plt.tight_layout()
+            plt.colorbar()
             plt.savefig("spec.png")
         else:
             print("modal:{0}[0] shape:{1}".format(modality, Xy[modality][0].shape))

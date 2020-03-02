@@ -101,16 +101,21 @@ class batchExtractor(featureExtractor):
     def __init__(self,
                  singleFileExtractor:featureExtractor,
                  cache_dir:str = DEFAULT_CACHE_PATH,
-                 file_squeeze:bool = False):
+                 file_squeeze:bool = False,
+                 sample_shift:int = 0):
         """
         file_squeeze: boolean, optional
             If enabled, all the features of selected files will be concatenated.
             This flag is NOT saved into cache file, thus client codes have to 
             manage whether loaded cache data have file dimension by your own.
+        sampled: boolean, optional
+            specify the shifting amount. If 0 is passed as this argument,
+            sampling process will be not applied.
         """
         super().__init__(cache_dir)
         self.singleFileExtractor = singleFileExtractor
         self.file_squeeze = file_squeeze
+        self.sample_shift = sample_shift
 
     def getXy(self,
               recipe:dict(),
@@ -138,16 +143,12 @@ class batchExtractor(featureExtractor):
         return feature
 
     def _extractFeature(self,
-                        fileName:str,
-                        modality:str = "",
                         verbose:int = 0,
                         **kwargs):
         """
-        fileName: str, required
-            concatenated file pathes of all modality
+        recipe: dictionary, required
         """
-        # nullfy unused argument
-        del fileName
+        # check arguments
         recipe = kwargs["recipe"]
 
         # extract feature from each file
@@ -184,5 +185,8 @@ class batchExtractor(featureExtractor):
                 samples[modality] = return_samples
                 if "return_samples" in locals():
                     del return_samples
+
+        if self.file_squeeze and self.sample_shift > 0:
+            pass
 
         return samples
