@@ -80,53 +80,46 @@ def test_landmarks(expFixture, modal):
     print(getShapeListArray(landmarks_list))
 
 @pytest.mark.landmark
-@pytest.mark.parametrize("file_squeeze", [True])
 @pytest.mark.parametrize("use_cache", [False, True])
+@pytest.mark.parametrize("sample_shift", [4])
 def test_batch( expFixture,
-                file_squeeze,
-                use_cache):
+                use_cache,
+                sample_shift):
     """
     Caution
     -------
     - This test may delete cache directory.
-    - The information of file_squeeze flag is not stored into cache.
+    - The information of sample_shift is not stored into cache.
     """
     fileSelector = expFixture.fileSelector
 
     be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
-                        file_squeeze=file_squeeze)
+                        sample_shift=sample_shift)
     if not use_cache:
         be.clearCache()
     recipe = {
-        "visual": fileSelector.getFileList("visual")[:10],
-        "audio": fileSelector.getFileList("audio")[:10],
+        "visual": fileSelector.getFileList("visual")[:2],
+        "audio": fileSelector.getFileList("audio")[:2],
     }
     Xy = be.getXy(recipe=recipe,
                  verbose=2)
 
-    for modality in recipe.keys():
-        if file_squeeze:
-            print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
-            plt.figure(figsize=(10, 6))
-            plt.subplot(2, 1, 1)
-            librosa.display.specshow(Xy["visual"][:, :, 1].T*5, x_axis="time")
-            plt.title('visual')
-            plt.colorbar()
-            plt.subplot(2, 1, 2)
-            librosa.display.specshow(Xy["audio"].T, x_axis="time")
-            plt.title('audio')
-            plt.tight_layout()
-            plt.colorbar()
-            plt.savefig("spec.png")
-        else:
-            print("modal:{0}[0] shape:{1}".format(modality, Xy[modality][0].shape))
+    # for modality in recipe.keys():
+    #     print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
+    #     plt.figure(figsize=(10, 6))
+    #     plt.subplot(2, 1, 1)
+    #     librosa.display.specshow(Xy["visual"][:, :, 1].T*5, x_axis="time")
+    #     plt.title('visual')
+    #     plt.colorbar()
+    #     plt.subplot(2, 1, 2)
+    #     librosa.display.specshow(Xy["audio"].T, x_axis="time")
+    #     plt.title('audio')
+    #     plt.tight_layout()
+    #     plt.colorbar()
+    #     plt.savefig("spec.png")
 
-    if file_squeeze:
-        assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-        assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
-    else:
-        assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-        assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
+    assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+    assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")

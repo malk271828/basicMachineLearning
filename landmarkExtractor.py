@@ -43,6 +43,9 @@ class landmarksExtractor(featureExtractor):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(shape_predictor)
 
+    def getDim(self):
+        return 32
+
     def _extractFeature(self,
                         fileName:str,
                         modality:str = "",
@@ -121,5 +124,7 @@ class landmarksExtractor(featureExtractor):
             mfccs = mfcc(y=signal, sr=samplerate, hop_length=int(samplerate/VIDEO_FPS))
 
             return mfccs.T
+        elif modality == "label":
+            pass
         else:
             raise Exception("modality argument must be passed to invoke this method")

@@ -51,7 +51,7 @@ class featureExtractor():
             shutil.rmtree(self.cache_dir)
 
     def getDim(self):
-        pass
+        raise NotImplemented
 
     def getXy(self,
              fileName:str,
@@ -101,7 +101,6 @@ class batchExtractor(featureExtractor):
     def __init__(self,
                  singleFileExtractor:featureExtractor,
                  cache_dir:str = DEFAULT_CACHE_PATH,
-                 file_squeeze:bool = False,
                  sample_shift:int = 0):
         """
         file_squeeze: boolean, optional
@@ -114,8 +113,8 @@ class batchExtractor(featureExtractor):
         """
         super().__init__(cache_dir)
         self.singleFileExtractor = singleFileExtractor
-        self.file_squeeze = file_squeeze
         self.sample_shift = sample_shift
+        self.window_size = self.singleFileExtractor.getDim()
 
     def getXy(self,
               recipe:dict(),
@@ -158,35 +157,37 @@ class batchExtractor(featureExtractor):
         else:
             fileIdxIterator = np.arange(self.num_files)
 
-        samples = dict()
+        features = dict()
         for fileIdx in fileIdxIterator:
             min_length = sys.maxsize
             for modality in recipe.keys():
-                features = self.singleFileExtractor.getXy(fileName=recipe[modality][fileIdx],
+                features_per_file = self.singleFileExtractor.getXy(fileName=recipe[modality][fileIdx],
                                                           modality=modality,
                                                           verbose=1)
-                if modality in samples.keys():
-                    samples[modality].append(features)
+                if modality in features.keys():
+                    features[modality].append(features_per_file)
                 else:
-                    samples[modality] = [features]
-                min_length = min(min_length, len(features))
+                    features[modality] = [features_per_file]
+                min_length = min(min_length, len(features_per_file))
 
-            # align length each modality
+            # align length of each modality
             for modality in recipe.keys():
-                samples[modality][fileIdx] = samples[modality][fileIdx][:min_length]
+                features[modality][fileIdx] = features[modality][fileIdx][:min_length]
 
-        if self.file_squeeze:
-            for modality in samples.keys():
-                for sample in samples[modality]:
-                    if "return_samples" in locals():
-                        return_samples = np.concatenate([return_samples, sample], axis=0)
-                    else:
-                        return_samples = sample
-                samples[modality] = return_samples
-                if "return_samples" in locals():
-                    del return_samples
+        if self.sample_shift > 0:
+            for modality in features.keys():
+                for features_per_file in features[modality]:
+                    num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
 
-        if self.file_squeeze and self.sample_shift > 0:
-            pass
+                    for sampleIdx in range(num_sample):
+                        start = sampleIdx * self.sample_shift
+                        end = sampleIdx * self.sample_shift + self.window_size
+                        sample = features_per_file[start:end]
 
-        return samples
+                        if "samples" in locals():
+                            samples = np.concatenate([np.expand_dims(sample, axis=0), samples], axis=0)
+                        else:
+                            samples = np.expand_dims(sample, axis=0)
+                features[modality] = samples
+                del samples
+        return features
