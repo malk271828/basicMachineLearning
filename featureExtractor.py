@@ -134,7 +134,7 @@ class batchExtractor(featureExtractor):
         allmodalConcatFile = "".join(list(itertools.chain.from_iterable(recipe.values())))
         concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(allmodalConcatFile.encode()).hexdigest() + ".npz"
 
-        feature = super().getXy(fileName=concatCachePath, recipe=recipe, **kwargs)
+        feature = super().getXy(fileName=concatCachePath, recipe=recipe, verbose=verbose, **kwargs)
 
         # savez method dictionary as ndarray
         if type(feature)==np.ndarray:
@@ -163,7 +163,7 @@ class batchExtractor(featureExtractor):
             for modality in recipe.keys():
                 features_per_file = self.singleFileExtractor.getXy(fileName=recipe[modality][fileIdx],
                                                           modality=modality,
-                                                          verbose=1)
+                                                          verbose=verbose)
                 if modality in features.keys():
                     features[modality].append(features_per_file)
                 else:
@@ -176,13 +176,15 @@ class batchExtractor(featureExtractor):
 
         if self.sample_shift > 0:
             for modality in features.keys():
+                if verbose > 0:
+                    print("sampling... modality:{0}".format(modality))
                 for features_per_file in features[modality]:
                     num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
 
                     for sampleIdx in range(num_sample):
                         start = sampleIdx * self.sample_shift
                         end = sampleIdx * self.sample_shift + self.window_size
-                        sample = features_per_file[start:end]
+                        sample = np.array(features_per_file[start:end])
 
                         if "samples" in locals():
                             samples = np.concatenate([np.expand_dims(sample, axis=0), samples], axis=0)
