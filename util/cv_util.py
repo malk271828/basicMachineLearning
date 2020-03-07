@@ -88,7 +88,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
                                    grouped_dim:int = 1,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
-                                   n_jobs:int = 2) -> tuple:
+                                   n_jobs:int = 4) -> tuple:
     """
     Return
     ------
@@ -113,7 +113,12 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
             original_array_per_layer[indices] = original_array
         list_original_arrays[i] = original_array_per_layer
 
-    Parallel(n_jobs=n_jobs, require='sharedmem')( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
+    if n_jobs == 1:
+        [_processGroup(i, group) for i, group in enumerate(list_grouped_patch_xy)]
+    else:
+        Parallel(n_jobs=n_jobs,
+                require="sharedmem",
+                verbose=verbose)( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
 
     if verbose > 0:
         print("list_grouped_patch_xy.shape: {0}".format((len(list_grouped_patch_xy),) + list_grouped_patch_xy[0].shape))
@@ -210,7 +215,12 @@ def generatePatchedImage(patch_info:np.array,
         else:
             raise ValueError
 
-    Parallel(n_jobs=n_jobs, require='sharedmem')([delayed(_processPatch)(patch) for patch in sorted(patch_info, key=itemgetter(4))])
+    if n_jobs == 1:
+        [_processPatch(patch) for patch in patch_info]
+    else:
+        Parallel(n_jobs=n_jobs,
+                backend='multiprocessing',
+                verbose=verbose)([delayed(_processPatch)(patch) for patch in sorted(patch_info, key=itemgetter(4))])
 
     if verbose > 0:
         print(Fore.CYAN)

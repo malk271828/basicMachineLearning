@@ -41,7 +41,7 @@ from lombardFileSelector import *
 
 @pytest.mark.parametrize("target_layer_names", [["input_1", "conv4_3_norm_mbox_conf_reshape", "fc7_mbox_conf_reshape",
                         "conv6_2_mbox_conf_reshape", "conv7_2_mbox_conf_reshape", "conv8_2_mbox_conf_reshape", "conv9_2_mbox_conf_reshape"]])
-@pytest.mark.parametrize("mode", ["add", "overwrite", "overwrite_perimeter"])
+@pytest.mark.parametrize("mode", ["add"])
 def test_inference(kerasSSD,
                    visualization,
                    target_layer_names,
@@ -111,6 +111,8 @@ def test_inference(kerasSSD,
     confidence_threshold_original = 0.4
     confidence_threshold = 0.00
 
+    y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
+
     # Display the image and draw the predicted boxes onto it.
 
     def transformCordinate(box, orgImage, img_width, img_height):
@@ -135,7 +137,6 @@ def test_inference(kerasSSD,
             # Filtering
             #--------------------------------------------------------------------------
             y_pred_thresh = [[y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])] for y_pred in list_y_pred][0]
-            y_pred_original_thresh = [y_pred_original[k][y_pred_original[k,:,1] > confidence_threshold_original] for k in range(y_pred_original.shape[0])]
 
             np.set_printoptions(precision=2, suppress=True, linewidth=90)
             print("Predicted {0} boxes:\n".format(len(y_pred_thresh[0])))
