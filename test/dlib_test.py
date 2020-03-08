@@ -92,19 +92,23 @@ def test_batch( expFixture,
     - The information of sample_shift is not stored into cache.
     """
     fileSelector = expFixture.fileSelector
+    fextractor = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
 
-    be = batchExtractor(landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH),
+    be = batchExtractor(fextractor,
+                        window_size=fextractor.getDim(),
                         sample_shift=sample_shift)
     if not use_cache:
         be.clearCache()
     recipe = {
-        "visual": fileSelector.getFileList("visual")[:2],
-        "audio": fileSelector.getFileList("audio")[:2],
+        "visual": fileSelector.getFileList("visual")[:3],
+        "audio": fileSelector.getFileList("audio")[:3],
     }
     Xy = be.getXy(recipe=recipe,
                  verbose=2)
 
-    # for modality in recipe.keys():
+    for modality in recipe.keys():
+        print("modality:{0} Xy.shape:{1}".format(modality, Xy[modality].shape))
+        assert Xy[modality].shape[1] == fextractor.getDim()
     #     print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
     #     plt.figure(figsize=(10, 6))
     #     plt.subplot(2, 1, 1)
@@ -118,6 +122,7 @@ def test_batch( expFixture,
     #     plt.colorbar()
     #     plt.savefig("spec.png")
 
+    # check if value indexed at center of face is 0
     assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
     assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
 

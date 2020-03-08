@@ -100,16 +100,15 @@ class batchExtractor(featureExtractor):
 
     def __init__(self,
                  singleFileExtractor:featureExtractor,
+                 window_size:int,
                  cache_dir:str = DEFAULT_CACHE_PATH,
                  sample_shift:int = 0):
         """
-        file_squeeze: boolean, optional
-            If enabled, all the features of selected files will be concatenated.
-            This flag is NOT saved into cache file, thus client codes have to 
-            manage whether loaded cache data have file dimension by your own.
-        sampled: boolean, optional
-            specify the shifting amount. If 0 is passed as this argument,
-            sampling process will be not applied.
+        sample_shift: int, optional
+            If this argument is positive value, all the features of selected
+            files will be sliced at interval of sample_shift. This value is
+            NOT saved into cache file, thus client codes have to manage whether
+            loaded cache data have file dimension by your own.
         """
         super().__init__(cache_dir)
         self.singleFileExtractor = singleFileExtractor
@@ -174,10 +173,22 @@ class batchExtractor(featureExtractor):
             for modality in recipe.keys():
                 features[modality][fileIdx] = features[modality][fileIdx][:min_length]
 
+        feature_shape = dict()
         if self.sample_shift > 0:
+            num_total_sample = 0
+            for modality in features.keys():
+                for features_per_file in features[modality]:
+                    if modality not in feature_shape.keys():
+                        feature_shape[modality] = features_per_file[0].shape
+                    num_total_sample += int( (len(features_per_file) - self.window_size) / self.sample_shift)
+
+            print("feature_shape: {0}".format(feature_shape))
             for modality in features.keys():
                 if verbose > 0:
                     print("sampling... modality:{0}".format(modality))
+
+                samples = np.zeros((num_total_sample, self.window_size) + feature_shape[modality])
+
                 for features_per_file in features[modality]:
                     num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
 
@@ -186,10 +197,6 @@ class batchExtractor(featureExtractor):
                         end = sampleIdx * self.sample_shift + self.window_size
                         sample = np.array(features_per_file[start:end])
 
-                        if "samples" in locals():
-                            samples = np.concatenate([np.expand_dims(sample, axis=0), samples], axis=0)
-                        else:
-                            samples = np.expand_dims(sample, axis=0)
+                        samples[sampleIdx] = sample
                 features[modality] = samples
-                del samples
         return features
