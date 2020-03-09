@@ -88,7 +88,7 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
                                    grouped_dim:int = 1,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
-                                   n_jobs:int = 4) -> tuple:
+                                   n_jobs:int = 1) -> tuple:
     """
     Return
     ------
@@ -216,7 +216,7 @@ def generatePatchedImage(patch_info:np.array,
             raise ValueError
 
     if n_jobs == 1:
-        [_processPatch(patch) for patch in patch_info]
+        [_processPatch(patch) for patch in sorted(patch_info, key=itemgetter(4))]
     else:
         Parallel(n_jobs=n_jobs,
                 backend='multiprocessing',
