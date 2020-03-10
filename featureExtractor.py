@@ -149,6 +149,7 @@ class batchExtractor(featureExtractor):
         """
         # check arguments
         recipe = kwargs["recipe"]
+        isFlattened = kwargs["isFlattened"]
 
         # extract feature from each file
         self.num_files = len(recipe[list(recipe.keys())[0]])
@@ -191,9 +192,14 @@ class batchExtractor(featureExtractor):
                 if modality == "ref" or modality == "label":
                     samples = np.zeros((num_total_sample, ) + feature_shape[modality])
                 else:
-                    samples = np.zeros((num_total_sample, self.window_size) + feature_shape[modality])
+                    if isFlattened:
+                        samples = np.zeros((num_total_sample, self.window_size * np.prod(feature_shape[modality])))
+                    else:
+                        samples = np.zeros((num_total_sample, self.window_size) + feature_shape[modality])
 
-                for features_per_file in features[modality]:
+                total_current_pos = 0
+                file_shift = 0
+                for fileIdx, features_per_file in enumerate(features[modality]):
                     num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
 
                     for sampleIdx in range(num_sample):
@@ -203,8 +209,12 @@ class batchExtractor(featureExtractor):
                             mode_val, mode_num = stats.mode(features_per_file[start:end], axis=-1)
                             sample = mode_val
                         else:
-                            sample = np.array(features_per_file[start:end])
-
-                        samples[sampleIdx] = sample
+                            if isFlattened:
+                                sample = np.array(features_per_file[start:end]).flatten()
+                            else:
+                                sample = np.array(features_per_file[start:end])
+                        samples[file_shift + sampleIdx] = sample
+                    total_current_pos += len(features_per_file)
+                    file_shift = int((total_current_pos - self.window_size) / self.sample_shift)
                 features[modality] = samples
         return features

@@ -81,9 +81,11 @@ def test_landmarks(expFixture, modal):
 
 @pytest.mark.landmark
 @pytest.mark.parametrize("use_cache", [False, True])
+@pytest.mark.parametrize("isFlattened", [False, True])
 @pytest.mark.parametrize("sample_shift", [4])
 def test_batch( expFixture,
                 use_cache,
+                isFlattened,
                 sample_shift):
     """
     Caution
@@ -104,11 +106,19 @@ def test_batch( expFixture,
         "audio": fileSelector.getFileList("audio")[:3],
     }
     Xy = be.getXy(recipe=recipe,
+                 isFlattened=isFlattened,
                  verbose=2)
 
     for modality in recipe.keys():
         print("modality:{0} Xy.shape:{1}".format(modality, Xy[modality].shape))
-        assert Xy[modality].shape[1] == fextractor.getDim()
+        if isFlattened:
+            assert Xy[modality].shape[1] != fextractor.getDim()
+            assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX*2 + 0] == 0
+            assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX*2 + 1] == 0
+        else:
+            assert Xy[modality].shape[1] == fextractor.getDim()
+            assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
+            assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
     #     print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
     #     plt.figure(figsize=(10, 6))
     #     plt.subplot(2, 1, 1)
@@ -123,8 +133,6 @@ def test_batch( expFixture,
     #     plt.savefig("spec.png")
 
     # check if value indexed at center of face is 0
-    assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
-    assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
