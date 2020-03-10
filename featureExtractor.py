@@ -6,6 +6,7 @@ import numpy as np
 from datetime import datetime
 import hashlib
 import itertools
+import scipy.stats as stats
 
 import cv2
 from tqdm import tqdm
@@ -187,7 +188,10 @@ class batchExtractor(featureExtractor):
                 if verbose > 0:
                     print("sampling... modality:{0}".format(modality))
 
-                samples = np.zeros((num_total_sample, self.window_size) + feature_shape[modality])
+                if modality == "ref" or modality == "label":
+                    samples = np.zeros((num_total_sample, ) + feature_shape[modality])
+                else:
+                    samples = np.zeros((num_total_sample, self.window_size) + feature_shape[modality])
 
                 for features_per_file in features[modality]:
                     num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
@@ -195,7 +199,11 @@ class batchExtractor(featureExtractor):
                     for sampleIdx in range(num_sample):
                         start = sampleIdx * self.sample_shift
                         end = sampleIdx * self.sample_shift + self.window_size
-                        sample = np.array(features_per_file[start:end])
+                        if modality == "ref" or modality == "label":
+                            mode_val, mode_num = stats.mode(eatures_per_file[start:end], axis=-1)
+                            sample = mode_val
+                        else:
+                            sample = np.array(features_per_file[start:end])
 
                         samples[sampleIdx] = sample
                 features[modality] = samples
