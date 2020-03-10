@@ -200,7 +200,7 @@ class batchExtractor(featureExtractor):
                         start = sampleIdx * self.sample_shift
                         end = sampleIdx * self.sample_shift + self.window_size
                         if modality == "ref" or modality == "label":
-                            mode_val, mode_num = stats.mode(eatures_per_file[start:end], axis=-1)
+                            mode_val, mode_num = stats.mode(features_per_file[start:end], axis=-1)
                             sample = mode_val
                         else:
                             sample = np.array(features_per_file[start:end])
