@@ -12,8 +12,6 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
 
 # Machine Learning Libraries
-from sklearn.datasets import *
-from sklearn.metrics import classification_report
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -69,7 +67,7 @@ def sampling(args):
     epsilon = K.random_normal(shape=(batch, dim))
     return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
-def build_generator(verbose, kwargs):
+def build_generator(kwargs):
     """
         :param latent_dim: shape of latent space
         :type latent_dim: 1 dimensional tuple including integers
@@ -78,6 +76,7 @@ def build_generator(verbose, kwargs):
               https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
     """
     GRAPHVIZ_ENABLE = False
+    verbose = 1
     input_shape  = kwargs["input_shape"]
     num_class = kwargs["num_class"]
     hidden_size  = kwargs["hidden_size"]
@@ -363,19 +362,38 @@ class adversarialTrainer:
 
 
 class CGANFactory(AbstractFactory):
-    def __init__(self, input_shape, num_class, learningRate, optimBetas, batchSize, timeSteps,
-                       generator_type, discriminator_type):
+    def __init__(self, input_shape: tuple,
+                       output_shape: tuple,
+                       num_class: int,
+                       hidden_size: int,
+                       learningRate: float,
+                       optimBetas: float,
+                       batchSize: int,
+                       timeSteps: int,
+                       generator_type: str,
+                       discriminator_type: str):
+        """
+        Abstract conditional Generative Adversarial Network Factory class
+
+        How to use
+        ----------
+        To obtain a gan family product, invoke a createProductFamily() method
+        with the argument specifying target backend system: ["keras"/"pytorch"]
+        E.g.
+            generator, discriminator, trainer = ganfactory.createProductFamily("pytorch")
+        """
         self.learningRate = learningRate
         self.optimBetas = optimBetas
         self.batchSize = batchSize
         self.timeSteps = timeSteps
 
+        # register constructor
         self.registerConstructor("keras", build_generator, 
                                 {
                                     "input_shape": input_shape,
                                     "num_class" : num_class,
-                                    "hidden_size": 10,
-                                    "output_shape": input_shape,
+                                    "hidden_size": hidden_size,
+                                    "output_shape": output_shape,
                                     "latent_dim": 32,
                                     "model_type": generator_type
                                 })
@@ -383,8 +401,8 @@ class CGANFactory(AbstractFactory):
                                 {
                                     "input_shape": input_shape,
                                     "num_class" : num_class,
-                                    "hidden_size": 10,
-                                    "output_shape": input_shape,
+                                    "hidden_size": hidden_size,
+                                    "output_shape": output_shape,
                                     "latent_dim": 32,
                                     "model_type": discriminator_type
                                 })
@@ -394,44 +412,81 @@ class CGANFactory(AbstractFactory):
                                     "batch_size": batchSize,
                                     "learning_rate": learningRate
                                 })
+
+        self.registerConstructor("pytorch", PytorchGenerator,
+                                {
+                                    "input_shape": input_shape,
+                                    "num_class" : num_class,
+                                    "hidden_size": hidden_size,
+                                    "output_shape": output_shape,
+                                    "latent_dim": 32,
+                                    "model_type": generator_type
+                                })
+        self.registerConstructor("pytorch", PytorchDiscriminator,
+                                {
+                                    "input_shape": input_shape,
+                                    "num_class" : num_class,
+                                    "hidden_size": hidden_size,
+                                    "output_shape": output_shape,
+                                    "latent_dim": 32,
+                                    "model_type": discriminator_type
+                                })
+        self.registerConstructor("pytorch", PytorchAdversarialTrainer,
+                                {
+                                    "learningRate": learningRate,
+                                    "optimBetas": optimBetas,
+                                })
         return
 
-class PytorchCGANFactory():
-    def __init__(self, learningRate=0.001, optimBetas=(0.9, 0.999), batchSize=100, timeSteps=10):
-        super(PytorchCGANFactory, self).__init__(learningRate, optimBetas, batchSize, timeSteps)
+# A summary of network can be displayed by printing API
+class PytorchGenerator(nn.Module):
+    def __init__(self, kwargs):
+        super(PytorchGenerator, self).__init__()
+        if kwargs["model_type"] == "linear":
+            self.map1 = nn.Linear(kwargs["input_shape"], kwargs["hidden_size"])
+            self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
+            self.map3 = nn.Linear(kwargs["hidden_size"], kwargs["output_shape"])
+        else:
+            raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
-    # A summary of network can be displayed by printing API
-    class Generator(nn.Module):
-        def __init__(self, input_size, hidden_size, output_size):
-            super(PytorchCGANFactory.Generator, self).__init__()
-            self.map1 = nn.Linear(input_size, hidden_size)
-            self.map2 = nn.Linear(hidden_size, hidden_size)
-            self.map3 = nn.Linear(hidden_size, output_size)
+    def forward(self, x):
+        x = F.elu(self.map1(x))
+        x = F.sigmoid(self.map2(x))
+        return self.map3(x)
 
-        def forward(self, x):
-            x = F.elu(self.map1(x))
-            x = F.sigmoid(self.map2(x))
-            return self.map3(x)
+class PytorchDiscriminator(nn.Module):
+    def __init__(self, kwargs):
+        super(PytorchDiscriminator, self).__init__()
+        if kwargs["model_type"] == "linear":
+            self.map1 = nn.Linear(kwargs["input_shape"], kwargs["hidden_size"])
+            self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
+            self.map3 = nn.Linear(kwargs["hidden_size"], kwargs["output_shape"])
+        else:
+            raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
-    class Discriminator(nn.Module):
-        def __init__(self, input_size, hidden_size, output_size):
-            super(PytorchCGANFactory.Discriminator, self).__init__()
-            self.map1 = nn.Linear(input_size, hidden_size)
-            self.map2 = nn.Linear(hidden_size, hidden_size)
-            self.map3 = nn.Linear(hidden_size, output_size)
+    def forward(self, x):
+        x = F.elu(self.map1(x))
+        x = F.elu(self.map2(x))
+        return F.sigmoid(self.map3(x))
 
-        def forward(self, x):
-            x = F.elu(self.map1(x))
-            x = F.elu(self.map2(x))
-            return F.sigmoid(self.map3(x))
+class PytorchAdversarialTrainer(nn.Module):
+    def __init__(self, kwargs):
+        self.learningRate = kwargs["learningRate"]
+        self.optimBetas = kwargs["optimBetas"]
+        self.batchSize = 100
+        self.timeSteps = 10
 
-    def build_generator(self, input_size, hidden_size, output_size):
-        return PytorchCGANFactory.Generator(input_size, hidden_size, output_size)
-
-    def build_discriminator(self, input_size, hidden_size, output_size):
-        return PytorchCGANFactory.Discriminator(input_size, hidden_size, output_size)
-
-    def adversarialTrain(self, X, y, generator, discriminator, epochs=3000, sample_interval=100):
+    def train(self, X: np.array,
+                    y: np.array,
+                    generator,
+                    discriminator,
+                    epochs: int = 3000,
+                    sample_interval: int = 100) -> nn.Module:
+        """
+        Returns
+        -------
+        returns an instance of self.
+        """
         criterion = nn.BCELoss()  # Binary cross entropy: http://pytorch.org/docs/nn.html#bceloss
         d_optimizer = optim.Adam(discriminator.parameters(), lr=self.learningRate, betas=self.optimBetas)
         g_optimizer = optim.Adam(generator.parameters(), lr=self.learningRate, betas=self.optimBetas)
@@ -439,8 +494,8 @@ class PytorchCGANFactory():
         d_steps = 1
         g_steps = 4
 
-        X_train, y_train = dataloader.getMiniBatchArray(self.batchSize, self.timeSteps)
-        #print("X_train: ", np.shape(np.array(X_train)))
+        X_train, y_train = X, y
+        print("X_train: ", np.array(X_train).shape)
 
         for epoch in range(epochs):
             for d_index in range(d_steps):
@@ -482,68 +537,4 @@ class PytorchCGANFactory():
                                                                     extract(g_error)[0],
                                                                     stats(extract(d_real_data)),
                                                                     stats(extract(d_fake_data))))
-        return
-
-def test_generator_1d_binary():
-    """binary classification test
-
-    Reference:
-        https://www.programcreek.com/python/example/104690/sklearn.datasets.load_breast_cancer
-    """
-    X, y = load_breast_cancer(return_X_y=True)
-    assert len(X) == len(y)
-    feature_shape = X[0].shape
-    z_dim = 20
-    print("\n--------------------------------------")
-    print("%d samples" % len(X))
-    print("feature_shape:", feature_shape)
-    print("--------------------------------------")
-    z = np.random.uniform(size=len(X))
-
-    g = build_generator(1, {"input_shape": feature_shape, "num_class": 2, "hidden_size": 8, "output_shape": feature_shape,
-                    "latent_dim": 32, "model_type": "vae"})
-
-    g.compile(loss=["mean_squared_error"], optimizer=Adam(0.0002, 0.5))
-    g.fit(X, batch_size=100, epochs=300)
-    # predicted_y = g.predict(x=[z, y])
-
-    # predicted_y = [int(i) if i == 0 else 1 for i in predicted_y]
-    # print(classification_report(y, predicted_y))
-
-def test_generator_1d_multi():
-    # multiclass classification
-    X, y = load_wine(return_X_y=True)
-    assert len(X) == len(y)
-    feature_shape = X[0].shape
-
-    g = build_generator(1, {"input_shape": feature_shape, "num_class": 3, "hidden_size": 8, "output_shape": 1,
-                    "latent_dim": 10, "model_type": "dense"})
-
-    g.compile(loss=['sparse_categorical_crossentropy'], optimizer=Adam(0.0002, 0.5))
-    g.fit([X, y], y, batch_size=100, epochs=100)
-
-def test_generator_2d_multi():
-    # multiclass classification
-    X, y = load_digits(return_X_y=True)
-    assert len(X) == len(y)
-    feature_shape = X[0].shape
-    X = np.reshape(X, (len(X), 8, 8))
-
-    g = build_generator(1, {"input_shape": feature_shape, "num_class": 10, "hidden_size": 8, "output_shape": 1,
-                    "latent_dim": 10, "model_type": "dense"})
-
-    g.compile(loss=['sparse_categorical_crossentropy'], optimizer=Adam(0.0002, 0.5))
-    g.fit([X, y], y, batch_size=100, epochs=100)
-
-def test_1():
-    X, y = load_boston(return_X_y=True)
-    X = X.reshape(len(X), 13, 1)
-    y = y.reshape(len(y), 1, 1)
-    #X = X.reshape(len(X), 8, 8, 1)
-
-    # Switch concrete factory which you want to create.
-    # factory = CGANFactory(input_shape=(13, 1), learningRate=0.01, optimBetas=0.1, batchSize=100, timeSteps=1, 
-    #                       generator_type="dense", discriminator_type="dense")
-    # g, d, trainer = factory.createProductFamily("keras")
-
-    # trainer.fit(X=X, y=y, generator=g, discriminator=d)
+        return self

@@ -125,6 +125,7 @@ class landmarksExtractor(featureExtractor):
 
             return mfccs.T
         elif modality == "label":
-            pass
+            # return dummy
+            return [0]*100
         else:
             raise Exception("modality argument must be passed to invoke this method")

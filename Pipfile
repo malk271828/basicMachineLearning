@@ -40,6 +40,8 @@ validators = "*"
 numpy = "*"
 argparse = "*"
 requests = "*"
+librosa = "*"
+loky = "*"
 
 [requires]
 python_version = "3.5"

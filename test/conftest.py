@@ -46,7 +46,7 @@ def getDictCombination(d):
     values = (d[key] for key in keys)
     return [dict(zip(keys, combination)) for combination in itertools.product(*values)]
 
-@pytest.fixture(params=getDictCombination({"target_layers":[[0], [1, 2, 3, 4, 5, 6]], "entry":[0, 1, 2, 3, 4]}))
+@pytest.fixture(params=getDictCombination({"target_layers":[[0, 1]], "entry":[0]}))
 def kerasSSD(request, scope="session"):
     sys.path.insert(0, "../ssd_keras")
     target_layer_names = ["conv2_2", "conv3_3", "conv4_2", "conv5_3", "conv6_1", "conv7_1", "conv8_1", "conv9_1"]

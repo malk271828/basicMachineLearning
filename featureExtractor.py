@@ -24,11 +24,6 @@ class featureExtractor():
                       fileName:str,
                       modality:str = "",
                       verbose:int = 0):
-        if isinstance(fileName, str):
-            self.cachePath = self.cache_dir + modality + "/" + splitext(basename(fileName))[0] + self.DEFAULT_CACHE_EXT
-        else:
-            self.cachePath = self.cache_dir + modality + "/" + str(datetime.now()) + self.DEFAULT_CACHE_EXT
-
         if not exists(self.cache_dir + modality):
             os.makedirs(self.cache_dir + modality)
 
@@ -57,9 +52,18 @@ class featureExtractor():
     def getXy(self,
              fileName:str,
              modality:str = "",
+             useCache:bool = True,
              verbose:int = 0,
              **kwargs):
         try:
+            # set cache path
+            if isinstance(fileName, str):
+                self.cachePath = self.cache_dir + modality + "/" + splitext(basename(fileName))[0] + self.DEFAULT_CACHE_EXT
+            else:
+                self.cachePath = self.cache_dir + modality + "/" + str(datetime.now()) + self.DEFAULT_CACHE_EXT
+
+            if not useCache:
+                raise FileNotFoundError
             if verbose > 0:
                 print(Fore.CYAN + "trying to load : {0}".format(fileName) + Style.RESET_ALL)
             features_list = self._loadFromCache(fileName=fileName, modality=modality, verbose=verbose)
@@ -118,6 +122,7 @@ class batchExtractor(featureExtractor):
 
     def getXy(self,
               recipe:dict(),
+              useCache:bool = True,
               verbose:int = 0,
               **kwargs):
         """
@@ -134,7 +139,7 @@ class batchExtractor(featureExtractor):
         allmodalConcatFile = "".join(list(itertools.chain.from_iterable(recipe.values())))
         concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(allmodalConcatFile.encode()).hexdigest() + ".npz"
 
-        feature = super().getXy(fileName=concatCachePath, recipe=recipe, verbose=verbose, **kwargs)
+        feature = super().getXy(fileName=concatCachePath, recipe=recipe, useCache=useCache, verbose=verbose, **kwargs)
 
         # savez method dictionary as ndarray
         if type(feature)==np.ndarray:
@@ -206,7 +211,7 @@ class batchExtractor(featureExtractor):
                         start = sampleIdx * self.sample_shift
                         end = sampleIdx * self.sample_shift + self.window_size
                         if modality == "ref" or modality == "label":
-                            mode_val, mode_num = stats.mode(features_per_file[start:end], axis=-1)
+                            mode_val, mode_num = stats.mode(features_per_file[start:end])
                             sample = mode_val
                         else:
                             if isFlattened:

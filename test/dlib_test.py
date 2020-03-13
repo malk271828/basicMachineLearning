@@ -80,11 +80,11 @@ def test_landmarks(expFixture, modal):
     print(getShapeListArray(landmarks_list))
 
 @pytest.mark.landmark
-@pytest.mark.parametrize("use_cache", [False, True])
+@pytest.mark.parametrize("useCache", [False, True])
 @pytest.mark.parametrize("isFlattened", [False, True])
 @pytest.mark.parametrize("sample_shift", [4])
 def test_batch( expFixture,
-                use_cache,
+                useCache,
                 isFlattened,
                 sample_shift):
     """
@@ -99,13 +99,12 @@ def test_batch( expFixture,
     be = batchExtractor(fextractor,
                         window_size=fextractor.getDim(),
                         sample_shift=sample_shift)
-    if not use_cache:
-        be.clearCache()
     recipe = {
         "visual": fileSelector.getFileList("visual")[:3],
         "audio": fileSelector.getFileList("audio")[:3],
     }
     Xy = be.getXy(recipe=recipe,
+                 useCache=useCache,
                  isFlattened=isFlattened,
                  verbose=2)
 
