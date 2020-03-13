@@ -155,6 +155,7 @@ class batchExtractor(featureExtractor):
         # check arguments
         recipe = kwargs["recipe"]
         isFlattened = kwargs["isFlattened"]
+        isOnehot = kwargs["isOnehot"]
 
         # extract feature from each file
         self.num_files = len(recipe[list(recipe.keys())[0]])

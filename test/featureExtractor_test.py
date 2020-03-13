@@ -82,10 +82,12 @@ def test_landmarks(expFixture, modal):
 @pytest.mark.landmark
 @pytest.mark.parametrize("useCache", [False, True])
 @pytest.mark.parametrize("isFlattened", [False, True])
-@pytest.mark.parametrize("sample_shift", [4])
+@pytest.mark.parametrize("isOnehot", [False])
+@pytest.mark.parametrize("sample_shift", [1, 4])
 def test_batch( expFixture,
                 useCache,
                 isFlattened,
+                isOnehot,
                 sample_shift):
     """
     Caution
@@ -106,6 +108,7 @@ def test_batch( expFixture,
     Xy = be.getXy(recipe=recipe,
                  useCache=useCache,
                  isFlattened=isFlattened,
+                 isOnehot=isOnehot,
                  verbose=2)
 
     for modality in recipe.keys():
