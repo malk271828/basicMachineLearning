@@ -49,6 +49,20 @@ class featureExtractor():
     def getDim(self):
         raise NotImplemented
 
+    def getCachePath(self,
+                     fileName:str,
+                     modality:str = ""):
+        """
+        get and set cache file path from file base name and modality
+        """
+        # set cache path
+        if isinstance(fileName, str):
+            self.cachePath = self.cache_dir + modality + "/" + splitext(basename(fileName))[0] + self.DEFAULT_CACHE_EXT
+        else:
+            self.cachePath = self.cache_dir + modality + "/" + str(datetime.now()) + self.DEFAULT_CACHE_EXT
+
+        return self.cachePath
+
     def getXy(self,
              fileName:str,
              modality:str = "",
@@ -56,11 +70,7 @@ class featureExtractor():
              verbose:int = 0,
              **kwargs):
         try:
-            # set cache path
-            if isinstance(fileName, str):
-                self.cachePath = self.cache_dir + modality + "/" + splitext(basename(fileName))[0] + self.DEFAULT_CACHE_EXT
-            else:
-                self.cachePath = self.cache_dir + modality + "/" + str(datetime.now()) + self.DEFAULT_CACHE_EXT
+            self.getCachePath(fileName, modality)
 
             if not useCache:
                 raise FileNotFoundError
@@ -120,6 +130,15 @@ class batchExtractor(featureExtractor):
         self.sample_shift = sample_shift
         self.window_size = self.singleFileExtractor.getDim()
 
+    def getCachePathList(self,
+                         recipe:dict) -> dict:
+        num_files = len(recipe[list(recipe.keys())[0]])
+        for fileIdx in np.arange(num_files):
+            for modality in recipe.keys():
+                recipe[modality][fileIdx] = super().getCachePath(fileName=recipe[modality][fileIdx],
+                                                                 modality=modality)
+        return recipe
+
     def getXy(self,
               recipe:dict(),
               useCache:bool = True,
@@ -160,7 +179,7 @@ class batchExtractor(featureExtractor):
         # extract feature from each file
         self.num_files = len(recipe[list(recipe.keys())[0]])
         if verbose > 0:
-            fileIdxIterator = tqdm(np.arange(self.num_files), ascii=True)
+            fileIdxIterator = tqdm(np.arange(self.num_files), ascii=True, desc="extracting")
         else:
             fileIdxIterator = np.arange(self.num_files)
 

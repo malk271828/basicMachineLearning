@@ -22,6 +22,7 @@ from keras.optimizers import Adam
 import mlflow
 import mlflow.sklearn
 import mlflow.keras
+import torch
 
 import librosa.display
 
@@ -135,6 +136,51 @@ def test_batch( expFixture,
     #     plt.savefig("spec.png")
 
     # check if value indexed at center of face is 0
+
+def test_pytorch_dataloader(expFixture):
+    """
+    Unifying test between pytorch dataloader and featureExtractor family.
+    """
+    class lombardDataSet(torch.utils.data.Dataset):
+        def __init__(self):
+            self.fileSelector = expFixture.fileSelector
+            self.fextractor = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
+            self.be = batchExtractor(self.fextractor,
+                                window_size=self.fextractor.getDim(),
+                                sample_shift=4)
+            self.recipe = {
+                "visual": self.fileSelector.getFileList("visual")[:3],
+                "audio": self.fileSelector.getFileList("audio")[:3],
+            }
+            cache_dict = self.be.getCachePathList(recipe=self.recipe)
+            self.Xy = self.be.getXy(recipe=self.recipe,
+                                    useCache=False,
+                                    isFlattened=False,
+                                    sample_shift=12,
+                                    isOnehot=False,
+                                    verbose=1)
+            self.modalList = list(self.Xy.keys())
+            self.num_file = len(cache_dict[self.modalList[0]])
+            self.len = len(self.Xy[self.modalList[0]])
+        def __len__(self):
+            return self.len
+
+        def __getitem__(self, idx):
+            return {modality:self.Xy[modality][idx] for modality in self.Xy.keys()}
+
+        def getModalList(self):
+            return self.modalList
+
+    dataset = lombardDataSet()
+    train_loader = torch.utils.data.DataLoader(
+        dataset=dataset,
+        batch_size=10,
+        shuffle=True,
+        num_workers=1
+    )
+    modalList = dataset.getModalList()
+    for batch in train_loader:
+        print(batch[modalList[0]].shape)
 
 def test_lombardFileSelector():
     fileSelector = lombardFileSelector(base_dir="../media/lombardgrid/")
