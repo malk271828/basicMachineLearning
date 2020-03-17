@@ -44,6 +44,8 @@ class featureExtractor():
         except OverflowError as error:
             # Output expected OverflowErrors.
             print(Fore.RED + str(error) + Style.RESET_ALL)
+            if exists(self.cachePath):
+                os.remove(self.cachePath)
 
     def clearCache(self):
         if exists(self.cache_dir):
