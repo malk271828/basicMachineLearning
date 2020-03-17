@@ -39,7 +39,11 @@ class featureExtractor():
     def _saveToCache(self,
                     features_list: list,
                     verbose:int = 0):
-        np.savez(self.cachePath, features=features_list, allow_pickle=True)
+        try:
+            np.savez(self.cachePath, features=features_list, allow_pickle=True)
+        except OverflowError as error:
+            # Output expected OverflowErrors.
+            print(Fore.RED + str(error) + Style.RESET_ALL)
 
     def clearCache(self):
         if exists(self.cache_dir):
