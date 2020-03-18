@@ -52,7 +52,7 @@ class featureExtractor():
             print(Fore.YELLOW + "Delete {0}".format(self.cache_dir))
             shutil.rmtree(self.cache_dir)
 
-    def getDim(self):
+    def getDim(self, modality):
         raise NotImplemented
 
     def getCachePath(self,
@@ -134,7 +134,7 @@ class batchExtractor(featureExtractor):
         super().__init__(cache_dir)
         self.singleFileExtractor = singleFileExtractor
         self.sample_shift = sample_shift
-        self.window_size = self.singleFileExtractor.getDim()
+        self.window_size = window_size
 
     def getCachePathList(self,
                          recipe:dict) -> dict:

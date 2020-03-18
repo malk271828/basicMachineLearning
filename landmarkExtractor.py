@@ -43,8 +43,12 @@ class landmarksExtractor(featureExtractor):
         self.detector = dlib.get_frontal_face_detector()
         self.predictor = dlib.shape_predictor(shape_predictor)
 
-    def getDim(self):
-        return 32
+    def getDim(self, modality):
+        if modality == "audio":
+            dim = 20
+        elif modality == "visual":
+            dim = 68*2
+        return dim
 
     def _extractFeature(self,
                         fileName:str,

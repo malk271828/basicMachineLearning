@@ -98,9 +98,9 @@ def test_batch( expFixture,
     """
     fileSelector = expFixture.fileSelector
     fextractor = landmarksExtractor(expFixture.SHAPE_PREDICTOR_PATH)
-
+    window_size = fextractor.getDim("audio")
     be = batchExtractor(fextractor,
-                        window_size=fextractor.getDim(),
+                        window_size=window_size,
                         sample_shift=sample_shift)
     recipe = {
         "visual": fileSelector.getFileList("visual")[:3],
@@ -115,11 +115,11 @@ def test_batch( expFixture,
     for modality in recipe.keys():
         print("modality:{0} Xy.shape:{1}".format(modality, Xy[modality].shape))
         if isFlattened:
-            assert Xy[modality].shape[1] != fextractor.getDim()
+            assert Xy[modality].shape[1] == fextractor.getDim(modality) * window_size
             assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX*2 + 0] == 0
             assert Xy["visual"][0][landmarksExtractor.DLIB_CENTER_INDEX*2 + 1] == 0
         else:
-            assert Xy[modality].shape[1] == fextractor.getDim()
+            assert Xy[modality].shape[1] == window_size
             assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][0] == 0
             assert Xy["visual"][0][0][landmarksExtractor.DLIB_CENTER_INDEX][1] == 0
     #     print("modal:{0} shape:{1}".format(modality, Xy[modality].shape))
