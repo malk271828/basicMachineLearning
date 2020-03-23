@@ -82,13 +82,25 @@ class groupedMinMaxScaler:
             print("range [{0}, {1}]->[{2}, {3}]".format(np.min(GroupedArray), np.max(GroupedArray), np.min(normalizedArray), np.max(normalizedArray)))
         return normalizedArray
 
+def processGroup(i, group, shape, mode, grouped_dim, cmStr, verbose):
+    original_array_per_layer = np.zeros((len(group),) + (shape[1], shape[0]))
+    for indices in np.ndindex(group.shape[:grouped_dim - 1]):
+        if verbose > 0:
+            print("--------------------")
+            print("{0} patches in group {1}-{2}:".format(len(group), i, indices))
+        original_array = generatePatchedImage(group[indices], shape, mode=mode,
+                                                            cmStr=cmStr,
+                                                            verbose=verbose)
+        original_array_per_layer[indices] = original_array
+    return i, original_array_per_layer
+
 def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
                                    shape:tuple,
                                    mode:str,
                                    grouped_dim:int = 1,
                                    cmStr:str = "jet",
                                    verbose:int = 0,
-                                   n_jobs:int = 1) -> tuple:
+                                   n_jobs:int = -1) -> tuple:
     """
     Return
     ------
@@ -100,25 +112,14 @@ def generateNormalizedPatchedImage(list_grouped_patch_xy:list,
     list_original_arrays = [0] * len(list_grouped_patch_xy)
     cm = plt.get_cmap(cmStr)
 
-    def _processGroup(i, group):
-        original_array_per_layer = np.zeros((len(group),) + (shape[1], shape[0]))
-        for indices in np.ndindex(group.shape[:grouped_dim - 1]):
-            if verbose > 0:
-                print("--------------------")
-                print("{0} patches in group {1}-{2}:".format(len(group), i, indices))
-            original_array = generatePatchedImage(group[indices], shape, mode=mode,
-                                                                cmStr=cmStr,
-                                                                verbose=verbose)
-
-            original_array_per_layer[indices] = original_array
-        list_original_arrays[i] = original_array_per_layer
-
     if n_jobs == 1:
-        [_processGroup(i, group) for i, group in enumerate(list_grouped_patch_xy)]
+        processed = [processGroup(i, group, shape, mode, grouped_dim, cmStr, verbose) for i, group in enumerate(list_grouped_patch_xy)]
     else:
-        Parallel(n_jobs=n_jobs,
-                require="sharedmem",
-                verbose=verbose)( [delayed(_processGroup)(i, group) for i, group in enumerate(list_grouped_patch_xy)] )
+        processed = Parallel(n_jobs=n_jobs,
+                             backend="loky",
+                             verbose=verbose)( [delayed(processGroup)(i, group, shape, mode, grouped_dim, cmStr, verbose) for i, group in enumerate(list_grouped_patch_xy)] )
+    processed.sort(key=lambda x: x[0])
+    list_original_arrays = [x[1] for x in processed]
 
     if verbose > 0:
         print("list_grouped_patch_xy.shape: {0}".format((len(list_grouped_patch_xy),) + list_grouped_patch_xy[0].shape))

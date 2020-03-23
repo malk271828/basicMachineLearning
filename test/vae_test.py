@@ -135,3 +135,46 @@ def test_mnist_2d():
                  data,
                  batch_size=batch_size,
                  model_name="vae_mlp")
+
+@pytest.mark.vae
+def test_vae_train(expFixture):
+    enable_mse = False
+    enable_graph = False
+    latent_dim = 64
+    batch_size = 128
+    epochs = 100
+    be = batchExtractor(expFixture.SHAPE_PREDICTOR_PATH, expFixture.filePath)
+    X = be.getX(verbose=2)
+    input_shape = X[0].shape
+
+    scaler = MinMaxScaler()
+    vae, encoder, decoder, vae_loss = build_vae(input_shape, latent_dim=latent_dim,
+                                        enable_mse=enable_mse, enable_graph=enable_graph)
+    vae.compile(optimizer=Adam(0.0002, 0.5), loss=vae_loss)
+    pipeline = Pipeline([('preprocessing', scaler), ('vae', vae)])
+
+    mlflow.set_experiment("vae_train")
+    with mlflow.start_run():
+        mlflow.keras.autolog()
+        transformed_X = Pipeline(pipeline.steps[:-1]).fit_transform(X)
+        pipeline.fit(transformed_X, transformed_X, vae__batch_size=batch_size, vae__epochs=epochs)
+
+        mlflow.log_param("latent_dim", latent_dim)
+        mlflow.log_param("batch_size", batch_size)
+        mlflow.log_param("epochs", epochs)
+        mlflow.sklearn.log_model(pipeline, "model")
+
+from keras import Sequential
+from keras.preprocessing.sequence import pad_sequences
+from sklearn.model_selection import train_test_split
+from keras.models import Sequential,Model
+from keras.layers import LSTM, Dense, Bidirectional, Input,Dropout,BatchNormalization, CuDNNGRU, CuDNNLSTM
+def buildmodel():
+    model = Sequential()
+    model.add(BatchNormalization(input_shape=(10, 128)))
+    model.add(Bidirectional(LSTM(128, dropout=0.4, recurrent_dropout=0.4, activation='relu', return_sequences=True)))
+    model.add(Bidirectional(LSTM(64, return_sequences = True)))
+    model.add(Dense(1,activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    print(model.summary())
+    return model

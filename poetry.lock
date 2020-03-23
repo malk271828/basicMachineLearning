@@ -128,6 +128,19 @@ version = "0.3.3"
 
 [[package]]
 category = "main"
+description = "Gang of Four Patterns"
+name = "GoFPatterns"
+optional = false
+python-versions = "*"
+version = "0.13"
+
+[package.source]
+reference = "0ae3600adc97bd748d5758a067126ffdab83ca4f"
+type = "git"
+url = "https://github.com/malk271828/GoFPatterns.git"
+
+[[package]]
+category = "main"
 description = "pasta is an AST-based Python refactoring library"
 name = "google-pasta"
 optional = false
@@ -496,11 +509,30 @@ version = "2.20"
 
 [[package]]
 category = "main"
+description = "A Functor library for Python"
+name = "pyfunctor"
+optional = false
+python-versions = "*"
+version = "0.1.3"
+
+[[package]]
+category = "main"
 description = "Python parsing module"
 name = "pyparsing"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 version = "2.4.6"
+
+[[package]]
+category = "main"
+description = "A poor man's debugger for Python."
+name = "pysnooper"
+optional = false
+python-versions = "*"
+version = "0.3.0"
+
+[package.extras]
+tests = ["pytest"]
 
 [[package]]
 category = "main"
@@ -807,8 +839,8 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "a843d8c9631b70a0279e26d34b207c3d5904853abdd9ba79b4505e4230f223e6"
-python-versions = "3.7.6"
+content-hash = "fa15b0886653f3c66e01adbf0dd74a3a199d53a5b8ed866c146402f93f123383"
+python-versions = "3.6.1"
 
 [metadata.files]
 absl-py = [
@@ -890,6 +922,7 @@ gast = [
     {file = "gast-0.3.3-py2.py3-none-any.whl", hash = "sha256:8f46f5be57ae6889a4e16e2ca113b1703ef17f2b0abceb83793eaba9e1351a45"},
     {file = "gast-0.3.3.tar.gz", hash = "sha256:b881ef288a49aa81440d2c5eb8aeefd4c2bb8993d5f50edae7413a85bfdb3b57"},
 ]
+GoFPatterns = []
 google-pasta = [
     {file = "google-pasta-0.2.0.tar.gz", hash = "sha256:c9f2c8dfc8f96d0d5808299920721be30c9eec37f2389f28904f454565c8a16e"},
     {file = "google_pasta-0.2.0-py2-none-any.whl", hash = "sha256:4612951da876b1a10fe3960d7226f0c7682cf901e16ac06e473b267a5afa8954"},
@@ -1250,9 +1283,16 @@ pycparser = [
     {file = "pycparser-2.20-py2.py3-none-any.whl", hash = "sha256:7582ad22678f0fcd81102833f60ef8d0e57288b6b5fb00323d101be910e35705"},
     {file = "pycparser-2.20.tar.gz", hash = "sha256:2d475327684562c3a96cc71adf7dc8c4f0565175cf86b6d7a404ff4c771f15f0"},
 ]
+pyfunctor = [
+    {file = "pyfunctor-0.1.3.tar.gz", hash = "sha256:a5fbd45114c40977309d137c0a037cfeceadbeba1f96457981fd53ecd16e9e90"},
+]
 pyparsing = [
     {file = "pyparsing-2.4.6-py2.py3-none-any.whl", hash = "sha256:c342dccb5250c08d45fd6f8b4a559613ca603b57498511740e65cd11a2e7dcec"},
     {file = "pyparsing-2.4.6.tar.gz", hash = "sha256:4c830582a84fb022400b85429791bc551f1f4871c33f23e44f353119e92f969f"},
+]
+pysnooper = [
+    {file = "PySnooper-0.3.0-py2.py3-none-any.whl", hash = "sha256:85892ef6f4009af7d729e73c7b9e4071a16d5063b1ac9340741c5f192501441b"},
+    {file = "PySnooper-0.3.0.tar.gz", hash = "sha256:7d7684d9d5cf1d026bba6a52e87009eab9458d3265b13059ab1abaea7eee6c93"},
 ]
 pytest = [
     {file = "pytest-5.4.1-py3-none-any.whl", hash = "sha256:0e5b30f5cb04e887b91b1ee519fa3d89049595f428c1db76e73bd7f17b09b172"},

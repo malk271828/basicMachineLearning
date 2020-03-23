@@ -76,21 +76,27 @@ def build_generator(kwargs):
               https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
     """
     GRAPHVIZ_ENABLE = False
-    verbose = 1
     input_shape  = kwargs["input_shape"]
     num_class = kwargs["num_class"]
     hidden_size  = kwargs["hidden_size"]
     output_shape = kwargs["output_shape"]
     latent_dim = kwargs["latent_dim"]
     model_type = kwargs["model_type"]
+    verbose = kwargs["verbose"]
 
     if not isinstance(input_shape, Iterable):
         input_shape = (input_shape,)
 
-    if model_type=="dense":
+    if model_type=="linear":
+        """
+        https://androidkt.com/linear-regression-model-in-keras/
+        """
         model = Sequential()
-        model.add(Dense(units=hidden_size, activation="relu", kernel_initializer="he_uniform", input_shape=input_shape))
-        model.add(Dense(units=output_shape, activation='linear'))
+        model.add(Dense(units=hidden_size,
+                        activation="relu",
+                        input_shape=input_shape))
+        model.add(Dense(units=output_shape,
+                        activation='relu'))
         if verbose > 0:
             model.summary()
         return model
@@ -177,19 +183,22 @@ def build_discriminator(kwargs):
     """
         @return discriminator model
     """
-    nb_classes = 2
-    intermediate_dim = 512
     input_shape  = kwargs["input_shape"]
+    num_class = kwargs["num_class"]
     hidden_size  = kwargs["hidden_size"]
-    output_shape = kwargs["output_size"]
+    output_shape = kwargs["output_shape"]
     latent_dim = kwargs["latent_dim"]
     model_type = kwargs["model_type"]
+    verbose = kwargs["verbose"]
 
     model = Sequential()
-    if model_type=="dense":
+    if model_type=="linear":
         model = Sequential()
-        model.add(Dense(units=15, activation="relu", kernel_initializer="he_uniform", input_shape=input_shape))
-        model.add(Dense(units=1, activation='linear'))
+        model.add(Dense(units=hidden_size, activation="relu", kernel_initializer="he_uniform", input_shape=input_shape))
+        model.add(Dense(units=num_class, activation='linear'))
+        if verbose > 0:
+            model.summary()
+        return model
     elif model_type=="1dcnn":
         model.add(Conv1D(filters=32, kernel_size=3, input_shape=input_shape))
         model.add(Activation('relu'))
@@ -395,7 +404,8 @@ class CGANFactory(AbstractFactory):
                                     "hidden_size": hidden_size,
                                     "output_shape": output_shape,
                                     "latent_dim": 32,
-                                    "model_type": generator_type
+                                    "model_type": generator_type,
+                                    "verbose": 1
                                 })
         self.registerConstructor("keras", build_discriminator,
                                 {
@@ -404,7 +414,8 @@ class CGANFactory(AbstractFactory):
                                     "hidden_size": hidden_size,
                                     "output_shape": output_shape,
                                     "latent_dim": 32,
-                                    "model_type": discriminator_type
+                                    "model_type": discriminator_type,
+                                    "verbose": 1
                                 })
         self.registerConstructor("keras", adversarialTrainer,
                                 {
@@ -443,31 +454,46 @@ class PytorchGenerator(nn.Module):
     def __init__(self, kwargs):
         super(PytorchGenerator, self).__init__()
         if kwargs["model_type"] == "linear":
-            self.map1 = nn.Linear(kwargs["input_shape"], kwargs["hidden_size"])
+            input_shape = kwargs["input_shape"]
+            if type(input_shape) == tuple:
+                input_shape = input_shape[0]
+            self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
+            self.dropout = nn.Dropout(p=0.4)
+            self.batchnorm1 = nn.BatchNorm1d(12)
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
             self.map3 = nn.Linear(kwargs["hidden_size"], kwargs["output_shape"])
+            self.softmax = nn.Softmax()
         else:
             raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
     def forward(self, x):
-        x = F.elu(self.map1(x))
-        x = F.sigmoid(self.map2(x))
-        return self.map3(x)
+        x = F.relu(self.map1(x))
+        x = self.batchnorm1(x)
+        x = F.relu(self.map2(x))
+        x = F.relu(self.map3(x))
+        x = self.dropout(x)
+        return self.softmax(x)
 
 class PytorchDiscriminator(nn.Module):
     def __init__(self, kwargs):
         super(PytorchDiscriminator, self).__init__()
         if kwargs["model_type"] == "linear":
-            self.map1 = nn.Linear(kwargs["input_shape"], kwargs["hidden_size"])
+            input_shape = kwargs["input_shape"]
+            if type(input_shape) == tuple:
+                input_shape = input_shape[0]
+            self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
             self.map3 = nn.Linear(kwargs["hidden_size"], kwargs["output_shape"])
         else:
             raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
     def forward(self, x):
-        x = F.elu(self.map1(x))
-        x = F.elu(self.map2(x))
-        return F.sigmoid(self.map3(x))
+        x = self.map1(x)
+        x = self.batchnorm1(x)
+        x = F.relu(self.map2(x))
+        x = F.relu(self.map3(x))
+        x = self.dropout(x)
+        return self.softmax(x)
 
 class PytorchAdversarialTrainer(nn.Module):
     def __init__(self, kwargs):
