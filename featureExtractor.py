@@ -160,6 +160,7 @@ class batchExtractor(featureExtractor):
                 "visual": list of visual modality source files,
                 "audio": list of audio modality source files
             }
+            Acceptable modalities are visual, audio, text, ref and label
         """
         allmodalConcatFile = "".join(list(itertools.chain.from_iterable(recipe.values())))
         concatCachePath = self.singleFileExtractor.cache_dir + hashlib.md5(allmodalConcatFile.encode()).hexdigest() + ".npz"
@@ -200,7 +201,8 @@ class batchExtractor(featureExtractor):
                     features[modality].append(features_per_file)
                 else:
                     features[modality] = [features_per_file]
-                min_length = min(min_length, len(features_per_file))
+                if modality != "text":
+                    min_length = min(min_length, len(features_per_file))
 
             # align length of each modality
             for modality in recipe.keys():
@@ -220,7 +222,7 @@ class batchExtractor(featureExtractor):
                 if verbose > 0:
                     print("sampling... modality:{0}".format(modality))
 
-                if modality == "ref" or modality == "label":
+                if modality == "ref" or modality == "label" or modality == "text":
                     samples = np.zeros((num_total_sample, ) + feature_shape[modality])
                 else:
                     if isFlattened:
