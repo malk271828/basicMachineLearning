@@ -455,13 +455,16 @@ class PytorchGenerator(nn.Module):
         super(PytorchGenerator, self).__init__()
         if kwargs["model_type"] == "linear":
             input_shape = kwargs["input_shape"]
+            output_shape = kwargs["output_shape"]
             if type(input_shape) == tuple:
                 input_shape = input_shape[0]
+            if type(output_shape) == tuple:
+                output_shape = output_shape[0]
             self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
             self.dropout = nn.Dropout(p=0.4)
-            self.batchnorm1 = nn.BatchNorm1d(12)
+            self.batchnorm1 = nn.BatchNorm1d(kwargs["hidden_size"])
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
-            self.map3 = nn.Linear(kwargs["hidden_size"], kwargs["output_shape"])
+            self.map3 = nn.Linear(kwargs["hidden_size"], output_shape)
             self.softmax = nn.Softmax()
         else:
             raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
@@ -470,25 +473,31 @@ class PytorchGenerator(nn.Module):
         x = F.relu(self.map1(x))
         x = self.batchnorm1(x)
         x = F.relu(self.map2(x))
-        x = F.relu(self.map3(x))
         x = self.dropout(x)
-        return self.softmax(x)
+        x = F.relu(self.map3(x))
+        return x
 
 class PytorchDiscriminator(nn.Module):
     def __init__(self, kwargs):
         super(PytorchDiscriminator, self).__init__()
         if kwargs["model_type"] == "linear":
             input_shape = kwargs["input_shape"]
+            output_shape = kwargs["output_shape"]
             if type(input_shape) == tuple:
                 input_shape = input_shape[0]
+            if type(output_shape) == tuple:
+                output_shape = output_shape[0]
             self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
-            self.map3 = nn.Linear(kwargs["hidden_size"], kwargs["output_shape"])
+            self.map3 = nn.Linear(kwargs["hidden_size"], 1)
+            self.dropout = nn.Dropout(p=0.4)
+            self.batchnorm1 = nn.BatchNorm1d(kwargs["hidden_size"])
+            self.softmax = nn.Softmax()
         else:
             raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
     def forward(self, x):
-        x = self.map1(x)
+        x = F.relu(self.map1(x))
         x = self.batchnorm1(x)
         x = F.relu(self.map2(x))
         x = F.relu(self.map3(x))

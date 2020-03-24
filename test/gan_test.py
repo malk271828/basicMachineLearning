@@ -49,9 +49,7 @@ def skDataset():
             print("skDataset ({0}):".format(dataset))
             print("%d samples" % len(self.X))
             print("X shape: {0}".format(self.feature_shape))
-            print(self.X)
             print("y shape: {0}".format(self.y[0].shape))
-            print(self.y)
             print(Fore.CYAN + "--------------------------------------")
             z = np.random.uniform(size=len(self.X))
         def getFeatureShape(self):
@@ -69,7 +67,7 @@ def skDataset():
 def test_generator_1d(skDataset,
                       framework,
                       dataset_name):
-    """binary classification test
+    """1d dataset classification test
 
     Reference:
         https://www.programcreek.com/python/example/104690/sklearn.datasets.load_breast_cancer
@@ -80,9 +78,9 @@ def test_generator_1d(skDataset,
     num_epochs = 300
 
     ganfactory = CGANFactory(input_shape=dataset.getFeatureShape(),
-                             output_shape=1,#skDataset.getFeatureShape(),
+                             output_shape=dataset.getFeatureShape(),
                              num_class=2,
-                             hidden_size=12,
+                             hidden_size=30,
                              learningRate=0.0001,
                              optimBetas=(0.9, 0.999), # unused
                              batchSize=batch_size,
@@ -94,17 +92,17 @@ def test_generator_1d(skDataset,
     print(g)
     print(d)
 
-    # train
+    # train discriminator
     if framework == "keras":
         if dataset_name == "cancer":
-            g.compile(loss=["binary_crossentropy"], optimizer=Adam(0.0002, 0.5))
+            d.compile(loss=["binary_crossentropy"], optimizer=Adam(0.0002, 0.5))
         elif dataset_name == "wine":
-            g.compile(loss=["sparse_categorical_crossentropy"], optimizer=Adam(0.0002, 0.5))
+            d.compile(loss=["sparse_categorical_crossentropy"], optimizer=Adam(0.0002, 0.5))
         else:
             raise Exception("unknown dataset name:{0}".format(dataset_name))
-        g.fit(X, y, batch_size=batch_size, epochs=num_epochs)
+        d.fit(X, y, batch_size=batch_size, epochs=num_epochs)
 
-        predicted_y = g.predict(X)
+        predicted_y = d.predict(X)
         predicted_y = [int(i) if i == 0 else 1 for i in predicted_y]
         print(classification_report(y, predicted_y))
     else:
@@ -112,19 +110,20 @@ def test_generator_1d(skDataset,
             dataset=dataset,
             batch_size=batch_size,
             shuffle=True,
-            num_workers=1,
+            num_workers=2,
             drop_last=True
         )
-        g.train()
+        d.train()
+        torch.set_num_threads(4)
         criterion = nn.BCELoss()
-        optimizer = optim.Adam(g.parameters(), 0.001)
+        optimizer = optim.Adam(d.parameters(), 0.0005)
         for epoch in range(num_epochs):
             epoch_loss = 0
             epoch_corrects = 0
             for X, y in train_loader:
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(True):
-                    pred_y = g(X)
+                    pred_y = d(X)
                     loss = criterion(pred_y, y)
                     loss.backward()
                     optimizer.step()
