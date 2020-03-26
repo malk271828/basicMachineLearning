@@ -64,16 +64,15 @@ def skDataset():
 
 @pytest.mark.parametrize("framework", ["pytorch"])
 @pytest.mark.parametrize("dataset_name", ["cancer"])
-def test_generator_1d(skDataset,
-                      framework,
-                      dataset_name):
+def test_discriminator_1d(skDataset,
+                          framework,
+                          dataset_name):
     """1d dataset classification test
 
     Reference:
         https://www.programcreek.com/python/example/104690/sklearn.datasets.load_breast_cancer
     """
     dataset = skDataset(dataset_name)
-    X, y = dataset.getXy()
     batch_size = 100
     num_epochs = 300
 
@@ -94,6 +93,8 @@ def test_generator_1d(skDataset,
 
     # train discriminator
     if framework == "keras":
+        X, y = dataset.getXy()
+
         if dataset_name == "cancer":
             d.compile(loss=["binary_crossentropy"], optimizer=Adam(0.0002, 0.5))
         elif dataset_name == "wine":
@@ -135,7 +136,44 @@ def test_generator_1d(skDataset,
             if epoch % 10 == 0:
                 print("Epoch [{0}/{1}] Loss:{2:.4f} Acc:{3:.4f}".format(epoch, num_epochs, epoch_loss, epoch_acc))
 
-def test_generator_2d_multi():
+@pytest.mark.parametrize("framework", ["pytorch"])
+@pytest.mark.parametrize("dataset_name", ["cancer"])
+def test_adversarial_train_1d(skDataset,
+                              framework,
+                              dataset_name):
+    dataset = skDataset(dataset_name)
+    X, y = dataset.getXy()
+    batch_size = 100
+    num_epochs = 300
+
+    ganfactory = CGANFactory(input_shape=dataset.getFeatureShape(),
+                             output_shape=dataset.getFeatureShape(),
+                             num_class=2,
+                             hidden_size=30,
+                             learningRate=0.0001,
+                             optimBetas=(0.9, 0.999), # unused
+                             batchSize=batch_size,
+                             timeSteps=20, # unused
+                             generator_type="linear",
+                             discriminator_type="linear")
+
+    g, d, trainer = ganfactory.createProductFamily(framework)
+    print(g)
+    print(d)
+
+    train_loader = torch.utils.data.DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=2,
+        drop_last=True
+    )
+
+    trainer.train(dataloader=train_loader,
+                  generator=g,
+                  discriminator=d)
+
+def test_discriminator_2d():
     # multiclass classification
     X, y = load_digits(return_X_y=True)
     assert len(X) == len(y)
