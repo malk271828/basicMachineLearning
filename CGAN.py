@@ -10,6 +10,7 @@ import warnings
 from collections.abc import Iterable
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', category=FutureWarning)
+import time
 
 # Machine Learning Libraries
 import torch
@@ -67,13 +68,13 @@ def sampling(args):
     epsilon = K.random_normal(shape=(batch, dim))
     return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
-def build_generator(kwargs):
+def build_keras_generator(kwargs):
     """
         :param latent_dim: shape of latent space
         :type latent_dim: 1 dimensional tuple including integers
         :return: generator model
         :ref: https://machinelearningmastery.com/how-to-develop-a-conditional-generative-adversarial-network-from-scratch/
-              https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
+            https://machinelearningmastery.com/how-to-develop-a-generative-adversarial-network-for-a-1-dimensional-function-from-scratch-in-keras/
     """
     GRAPHVIZ_ENABLE = False
     input_shape  = kwargs["input_shape"]
@@ -83,6 +84,11 @@ def build_generator(kwargs):
     latent_dim = kwargs["latent_dim"]
     model_type = kwargs["model_type"]
     verbose = kwargs["verbose"]
+
+    if type(input_shape) == tuple:
+        input_shape = input_shape[0]
+    if type(output_shape) == tuple:
+        output_shape = output_shape[0]
 
     if not isinstance(input_shape, Iterable):
         input_shape = (input_shape,)
@@ -179,7 +185,7 @@ def build_generator(kwargs):
             plot_model(out, to_file='generator.png', show_shapes=True)
     return out
 
-def build_discriminator(kwargs):
+def build_keras_discriminator(kwargs):
     """
         @return discriminator model
     """
@@ -191,11 +197,14 @@ def build_discriminator(kwargs):
     model_type = kwargs["model_type"]
     verbose = kwargs["verbose"]
 
+    if type(output_shape) == tuple:
+        output_shape = output_shape[0]
+
     model = Sequential()
     if model_type=="linear":
         model = Sequential()
         model.add(Dense(units=hidden_size, activation="relu", kernel_initializer="he_uniform", input_shape=input_shape))
-        model.add(Dense(units=num_class, activation='linear'))
+        model.add(Dense(units=num_class, activation='softmax'))
         if verbose > 0:
             model.summary()
         return model
@@ -314,7 +323,7 @@ class adversarialTrainer:
         # The combined model  (stacked generator and discriminator)
         # Trains generator to fool discriminator
         combined = Model([noise, cInput], valid)
-        combined.compile(loss=['binary_crossentropy'], optimizer=optimizer)
+        combinediscriminator.compile(loss=['binary_crossentropy'], optimizer=optimizer)
 
         return combined
 
@@ -323,7 +332,7 @@ class adversarialTrainer:
 
         # build adversarial model
         self.combined = self._buildAdversarialModel(generator, discriminator)
-        self.combined.summary()
+        self.combinediscriminator.summary()
         plot_model(self.combined, to_file='model.png', show_shapes=True)
 
         X_train, y_train = X, y
@@ -364,7 +373,7 @@ class adversarialTrainer:
                 sampled_labels = np.random.randint(0, 10, (self.batch_size, 1))
 
                 # Train the generator
-                g_loss = self.combined.train_on_batch([noise, sampled_labels], valid)
+                g_loss = self.combinediscriminator.train_on_batch([noise, sampled_labels], valid)
 
                 # Plot the progress
                 print ("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss))
@@ -382,13 +391,13 @@ class CGANFactory(AbstractFactory):
                        generator_type: str,
                        discriminator_type: str):
         """
-        Abstract conditional Generative Adversarial Network Factory class
+        Abstract Factory Class for Conditional Generative Adversarial Network
 
         How to use
         ----------
         To obtain a gan family product, invoke a createProductFamily() method
         with the argument specifying target backend system: ["keras"/"pytorch"]
-        E.g.
+        E.generator.
             generator, discriminator, trainer = ganfactory.createProductFamily("pytorch")
         """
         self.learningRate = learningRate
@@ -397,7 +406,7 @@ class CGANFactory(AbstractFactory):
         self.timeSteps = timeSteps
 
         # register constructor
-        self.registerConstructor("keras", build_generator, 
+        self.registerConstructor("keras", build_keras_generator, 
                                 {
                                     "input_shape": input_shape,
                                     "num_class" : num_class,
@@ -407,7 +416,7 @@ class CGANFactory(AbstractFactory):
                                     "model_type": generator_type,
                                     "verbose": 1
                                 })
-        self.registerConstructor("keras", build_discriminator,
+        self.registerConstructor("keras", build_keras_discriminator,
                                 {
                                     "input_shape": input_shape,
                                     "num_class" : num_class,
@@ -453,7 +462,8 @@ class CGANFactory(AbstractFactory):
 class PytorchGenerator(nn.Module):
     def __init__(self, kwargs):
         super(PytorchGenerator, self).__init__()
-        if kwargs["model_type"] == "linear":
+        self.model_type = kwargs["model_type"]
+        if self.model_type == "linear":
             input_shape = kwargs["input_shape"]
             output_shape = kwargs["output_shape"]
             if type(input_shape) == tuple:
@@ -466,15 +476,52 @@ class PytorchGenerator(nn.Module):
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
             self.map3 = nn.Linear(kwargs["hidden_size"], output_shape)
             self.softmax = nn.Softmax()
+        elif self.model_type == "2dcnn":
+            self.layer1 = nn.Sequential(
+                nn.ConvTranspose2d(z_dim, image_size * 8,
+                                kernel_size=4, stride=1),
+                nn.BatchNorm2d(image_size * 8),
+                nn.ReLU(inplace=True))
+
+            self.layer2 = nn.Sequential(
+                nn.ConvTranspose2d(image_size * 8, image_size * 4,
+                                kernel_size=4, stride=2, padding=1),
+                nn.BatchNorm2d(image_size * 4),
+                nn.ReLU(inplace=True))
+
+            self.layer3 = nn.Sequential(
+                nn.ConvTranspose2d(image_size * 4, image_size * 2,
+                                kernel_size=4, stride=2, padding=1),
+                nn.BatchNorm2d(image_size * 2),
+                nn.ReLU(inplace=True))
+
+            self.layer4 = nn.Sequential(
+                nn.ConvTranspose2d(image_size * 2, image_size,
+                                kernel_size=4, stride=2, padding=1),
+                nn.BatchNorm2d(image_size),
+                nn.ReLU(inplace=True))
+
+            self.last = nn.Sequential(
+                nn.ConvTranspose2d(image_size, 1, kernel_size=4,
+                                stride=2, padding=1),
+                nn.Tanh())
+            # 注意：白黒画像なので出力チャネルは1つだけ
         else:
             raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
     def forward(self, x):
-        x = F.relu(self.map1(x))
-        x = self.batchnorm1(x)
-        x = F.relu(self.map2(x))
-        x = self.dropout(x)
-        x = F.relu(self.map3(x))
+        if self.model_type == "linear":
+            x = F.relu(self.map1(x))
+            x = self.batchnorm1(x)
+            x = F.relu(self.map2(x))
+            x = self.dropout(x)
+            x = F.relu(self.map3(x))
+        elif self.model_type == "2dcnn":
+            x = self.layer1(x)
+            x = self.layer2(x)
+            x = self.layer3(x)
+            x = self.layer4(x)
+            x = self.last(x)
         return x
 
 class PytorchDiscriminator(nn.Module):
@@ -505,16 +552,144 @@ class PytorchDiscriminator(nn.Module):
         return self.softmax(x)
 
 class PytorchAdversarialTrainer(nn.Module):
+    """
+    Reference
+    ---------
+    https://github.com/YutaroOgawa/pytorch_advanced/blob/master/5_gan_generation/5-1-2_DCGAN.ipynb
+    """
     def __init__(self, kwargs):
         self.learningRate = kwargs["learningRate"]
         self.optimBetas = kwargs["optimBetas"]
         self.batchSize = 100
         self.timeSteps = 10
 
-    def train(self, X: np.array,
-                    y: np.array,
-                    generator,
+    def train_model(self, generator, discriminator, dataloader, num_epochs=300):
+        # GPUが使えるかを確認
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print("使用デバイス：", device)
+
+        # 最適化手法の設定
+        g_lr, d_lr = 0.0001, 0.0004
+        beta1, beta2 = 0.0, 0.9
+        g_optimizer = torch.optim.Adam(generator.parameters(), g_lr, [beta1, beta2])
+        d_optimizer = torch.optim.Adam(discriminator.parameters(), d_lr, [beta1, beta2])
+
+        # 誤差関数を定義
+        criterion = nn.BCEWithLogitsLoss(reduction='mean')
+
+        # パラメータをハードコーディング
+        z_dim = 20
+        mini_batch_size = 64
+
+        # ネットワークをGPUへ
+        generator.to(device)
+        discriminator.to(device)
+
+        generator.train()  # モデルを訓練モードに
+        discriminator.train()  # モデルを訓練モードに
+
+        # ネットワークがある程度固定であれば、高速化させる
+        torch.backends.cudnn.benchmark = True
+
+        # 画像の枚数
+        num_train_imgs = len(dataloader.dataset)
+        batch_size = dataloader.batch_size
+
+        # イテレーションカウンタをセット
+        iteration = 1
+        logs = []
+
+        # epochのループ
+        for epoch in range(num_epochs):
+
+            # 開始時刻を保存
+            t_epoch_start = time.time()
+            epoch_g_loss = 0.0  # epochの損失和
+            epoch_d_loss = 0.0  # epochの損失和
+
+            print('-------------')
+            print('Epoch {}/{}'.format(epoch, num_epochs))
+            print('-------------')
+            print('（train）')
+
+            # データローダーからminibatchずつ取り出すループ
+            for imges, y in dataloader:
+
+                # --------------------
+                # 1. Discriminatorの学習
+                # --------------------
+                # ミニバッチがサイズが1だと、バッチノーマライゼーションでエラーになるのでさける
+                if imges.size()[0] == 1:
+                    continue
+
+                # GPUが使えるならGPUにデータを送る
+                imges = imges.to(device)
+
+                # 正解ラベルと偽ラベルを作成
+                # epochの最後のイテレーションはミニバッチの数が少なくなる
+                mini_batch_size = imges.size()[0]
+                label_real = torch.full((mini_batch_size,), 1).to(device)
+                label_fake = torch.full((mini_batch_size,), 0).to(device)
+
+                # 真の画像を判定
+                d_out_real = discriminator(imges)
+
+                # 偽の画像を生成して判定
+                input_z = torch.randn(mini_batch_size, z_dim).to(device)
+                input_z = input_z.view(input_z.size(0), input_z.size(1), 1, 1)
+                fake_images = generator(input_z)
+                d_out_fake = discriminator(fake_images)
+
+                # 誤差を計算
+                d_loss_real = criterion(d_out_real.view(-1), label_real)
+                d_loss_fake = criterion(d_out_fake.view(-1), label_fake)
+                d_loss = d_loss_real + d_loss_fake
+
+                # バックプロパゲーション
+                g_optimizer.zero_grad()
+                d_optimizer.zero_grad()
+
+                d_loss.backward()
+                d_optimizer.step()
+
+                # --------------------
+                # 2. Generatorの学習
+                # --------------------
+                # 偽の画像を生成して判定
+                input_z = torch.randn(mini_batch_size, z_dim).to(device)
+                input_z = input_z.view(input_z.size(0), input_z.size(1), 1, 1)
+                fake_images = generator(input_z)
+                d_out_fake = discriminator(fake_images)
+
+                # 誤差を計算
+                g_loss = criterion(d_out_fake.view(-1), label_real)
+
+                # バックプロパゲーション
+                g_optimizer.zero_grad()
+                d_optimizer.zero_grad()
+                g_loss.backward()
+                g_optimizer.step()
+
+                # --------------------
+                # 3. 記録
+                # --------------------
+                epoch_d_loss += d_loss.item()
+                epoch_g_loss += g_loss.item()
+                iteration += 1
+
+            # epochのphaseごとのlossと正解率
+            t_epoch_finish = time.time()
+            print('-------------')
+            print('epoch {} || Epoch_D_Loss:{:.4f} ||Epoch_G_Loss:{:.4f}'.format(
+                epoch, epoch_d_loss/batch_size, epoch_g_loss/batch_size))
+            print('timer:  {:.4f} sec.'.format(t_epoch_finish - t_epoch_start))
+            t_epoch_start = time.time()
+
+        return generator, discriminator
+
+    def train(self, generator,
                     discriminator,
+                    dataloader,
                     epochs: int = 3000,
                     sample_interval: int = 100) -> nn.Module:
         """
@@ -529,47 +704,45 @@ class PytorchAdversarialTrainer(nn.Module):
         d_steps = 1
         g_steps = 4
 
-        X_train, y_train = X, y
-        print("X_train: ", np.array(X_train).shape)
-
         for epoch in range(epochs):
-            for d_index in range(d_steps):
-                # 1. Train D on real+fake
-                discriminator.zero_grad()
+            for X_train, y_train in dataloader:
+                for d_index in range(d_steps):
+                    # 1. Train D on real+fake
+                    discriminator.zero_grad()
 
-                #  1A: Train D on real
-                d_real_data = Variable(torch.Tensor(X_train))
-                d_real_decision = discriminator(d_real_data) # "preprocess" was removed
-                d_real_error = criterion(d_real_decision, Variable(torch.ones(self.batchSize, 1)))  # ones = true
-                d_real_error.backward() # compute/store gradients, but don't change params
+                    #  1A: Train D on real
+                    d_real_data = Variable(torch.Tensor(X_train))
+                    d_real_decision = discriminator(d_real_data) # "preprocess" was removed
+                    d_real_error = criterion(d_real_decision, Variable(torch.ones(self.batchSize, 1)))  # ones = true
+                    d_real_error.backward() # compute/store gradients, but don't change params
 
-                #  1B: Train D on fake
-                noise = np.random.normal(0.999, 1.001, (self.batchSize, self.timeSteps, 1))
-                d_gen_input = Variable(torch.Tensor(noise))
-                d_fake_data = generator(d_gen_input).detach()  # detach to avoid training G on these labels
-                d_fake_decision = discriminator(d_fake_data) # "preprocess" was removed
-                d_fake_error = criterion(d_fake_decision, Variable(torch.zeros(self.batchSize, 1)))  # zeros = fake
-                d_fake_error.backward()
-                d_optimizer.step()     # Only optimizes D's parameters; changes based on stored gradients from backward()
+                    #  1B: Train D on fake
+                    noise = np.random.normal(0.999, 1.001, (self.batchSize, self.timeSteps, 1))
+                    d_gen_input = Variable(torch.Tensor(noise))
+                    d_fake_data = generator(d_gen_input).detach()  # detach to avoid training G on these labels
+                    d_fake_decision = discriminator(d_fake_data) # "preprocess" was removed
+                    d_fake_error = criterion(d_fake_decision, Variable(torch.zeros(self.batchSize, 1)))  # zeros = fake
+                    d_fake_error.backward()
+                    d_optimizer.step()     # Only optimizes D's parameters; changes based on stored gradients from backward()
 
-            for g_index in range(g_steps):
-                # 2. Train G on D's response (but DO NOT train D on these labels)
-                generator.zero_grad()
+                for g_index in range(g_steps):
+                    # 2. Train G on D's response (but DO NOT train D on these labels)
+                    generator.zero_grad()
 
-                noise = np.random.normal(0.999, 1.001, (self.batchSize, self.timeSteps, 1))
-                gen_input = Variable(torch.Tensor(noise))
-                g_fake_data = generator(gen_input)
-                dg_fake_decision = discriminator(g_fake_data)
-                g_error = criterion(dg_fake_decision, Variable(torch.ones(self.batchSize, 1)))  # we want to fool, so pretend it's all genuine
+                    noise = np.random.normal(0.999, 1.001, (self.batchSize, self.timeSteps, 1))
+                    gen_input = Variable(torch.Tensor(noise))
+                    g_fake_data = generator(gen_input)
+                    dg_fake_decision = discriminator(g_fake_data)
+                    g_error = criterion(dg_fake_decision, Variable(torch.ones(self.batchSize, 1)))  # we want to fool, so pretend it's all genuine
 
-                g_error.backward()
-                g_optimizer.step()  # Only optimizes G's parameters
+                    g_error.backward()
+                    g_optimizer.step()  # Only optimizes G's parameters
 
-            if epoch % 100 == 0:
-                print("%s: D: %s/%s G: %s (Real: %s, Fake: %s) " % (epoch,
-                                                                    extract(d_real_error)[0],
-                                                                    extract(d_fake_error)[0],
-                                                                    extract(g_error)[0],
-                                                                    stats(extract(d_real_data)),
-                                                                    stats(extract(d_fake_data))))
+                if epoch % 100 == 0:
+                    print("%s: D: %s/%s G: %s (Real: %s, Fake: %s) " % (epoch,
+                                                                        extract(d_real_error)[0],
+                                                                        extract(d_fake_error)[0],
+                                                                        extract(g_error)[0],
+                                                                        stats(extract(d_real_data)),
+                                                                        stats(extract(d_fake_data))))
         return self
