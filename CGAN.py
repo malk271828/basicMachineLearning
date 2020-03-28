@@ -38,10 +38,6 @@ from GoF.AbstractFactory import AbstractFactory
 data_mean = 4
 data_stddev = 1.25
 
-class Backend(Enum):
-    KERAS = 0
-    PYTORCH = 1
-
 def extract(v):
     return v.data.storage().tolist()
 
@@ -93,11 +89,11 @@ def build_keras_generator(kwargs):
     if not isinstance(input_shape, Iterable):
         input_shape = (input_shape,)
 
+    model = Sequential()
     if model_type=="linear":
         """
         https://androidkt.com/linear-regression-model-in-keras/
         """
-        model = Sequential()
         model.add(Dense(units=hidden_size,
                         activation="relu",
                         input_shape=input_shape))
@@ -118,6 +114,7 @@ def build_keras_generator(kwargs):
         model.add(BatchNormalization(momentum=0.8))
         model.add(Dense(units=np.prod(input_shape), activation='tanh'))
         model.add(Reshape(target_shape=input_shape))
+        return model
     elif model_type=="lstm":
         model.add(LSTM(32, input_shape=input_shape, return_sequences=True, stateful=False, name="LSTM_Generator"))
         model.add(Dense(output_shape, activation='relu'))
@@ -220,7 +217,8 @@ def build_keras_discriminator(kwargs):
         model.add(Dense(1024))
         model.add(Activation('relu'))
         model.add(Dropout(1.0))
-        model.add(Dense(nb_classes, activation='softmax'))
+        model.add(Dense(num_class, activation='softmax'))
+        return model
     elif model_type=="2dcnn":
         model.add(Conv2D(32, kernel_size=(3, 3), input_shape=input_shape))
         model.add(Activation('relu'))
@@ -231,7 +229,8 @@ def build_keras_discriminator(kwargs):
         model.add(Dense(1024))
         model.add(Activation('relu'))
         model.add(Dropout(1.0))
-        model.add(Dense(nb_classes, activation='softmax'))
+        model.add(Dense(num_class, activation='softmax'))
+        return model
     elif model_type=="lstm":
         model.add(LSTM(32, input_shape=input_shape, stateful=False, name="LSTM_Discriminator"))
         model.add(LeakyReLU(alpha=0.2))
@@ -462,23 +461,28 @@ class CGANFactory(AbstractFactory):
 class PytorchGenerator(nn.Module):
     def __init__(self, kwargs):
         super(PytorchGenerator, self).__init__()
+
+        # extract arguments from kwargs
         self.model_type = kwargs["model_type"]
+        input_shape = kwargs["input_shape"]
+        output_shape = kwargs["output_shape"]
+        hidden_size = kwargs["hidden_size"]
+        if type(input_shape) == tuple:
+            input_shape = input_shape[0]
+        if type(output_shape) == tuple:
+            output_shape = output_shape[0]
+
         if self.model_type == "linear":
-            input_shape = kwargs["input_shape"]
-            output_shape = kwargs["output_shape"]
-            if type(input_shape) == tuple:
-                input_shape = input_shape[0]
-            if type(output_shape) == tuple:
-                output_shape = output_shape[0]
-            self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
+            self.map1 = nn.Linear(input_shape, hidden_size)
             self.dropout = nn.Dropout(p=0.4)
-            self.batchnorm1 = nn.BatchNorm1d(kwargs["hidden_size"])
-            self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
-            self.map3 = nn.Linear(kwargs["hidden_size"], output_shape)
+            self.batchnorm1 = nn.BatchNorm1d(hidden_size)
+            self.map2 = nn.Linear(hidden_size, hidden_size)
+            self.map3 = nn.Linear(hidden_size, output_shape)
             self.softmax = nn.Softmax()
         elif self.model_type == "2dcnn":
+            image_size = 8
             self.layer1 = nn.Sequential(
-                nn.ConvTranspose2d(z_dim, image_size * 8,
+                nn.ConvTranspose2d(hidden_size, image_size * 8,
                                 kernel_size=4, stride=1),
                 nn.BatchNorm2d(image_size * 8),
                 nn.ReLU(inplace=True))
@@ -505,7 +509,6 @@ class PytorchGenerator(nn.Module):
                 nn.ConvTranspose2d(image_size, 1, kernel_size=4,
                                 stride=2, padding=1),
                 nn.Tanh())
-            # 注意：白黒画像なので出力チャネルは1つだけ
         else:
             raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
 
@@ -527,29 +530,72 @@ class PytorchGenerator(nn.Module):
 class PytorchDiscriminator(nn.Module):
     def __init__(self, kwargs):
         super(PytorchDiscriminator, self).__init__()
-        if kwargs["model_type"] == "linear":
-            input_shape = kwargs["input_shape"]
-            output_shape = kwargs["output_shape"]
-            if type(input_shape) == tuple:
-                input_shape = input_shape[0]
-            if type(output_shape) == tuple:
-                output_shape = output_shape[0]
+
+        # extract arguments from kwargs
+        self.model_type = kwargs["model_type"]
+        input_shape = kwargs["input_shape"]
+        output_shape = kwargs["output_shape"]
+        hidden_size = kwargs["hidden_size"]
+        if type(input_shape) == tuple:
+            input_shape = input_shape[0]
+        if type(output_shape) == tuple:
+            output_shape = output_shape[0]
+
+        if self.model_type == "linear":
             self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
             self.map3 = nn.Linear(kwargs["hidden_size"], 1)
             self.dropout = nn.Dropout(p=0.4)
             self.batchnorm1 = nn.BatchNorm1d(kwargs["hidden_size"])
             self.softmax = nn.Softmax()
+        elif self.model_type == "2dcnn":
+            image_size = 8
+            self.layer1 = nn.Sequential(
+                nn.ConvTranspose2d(hidden_size, image_size * 8,
+                                kernel_size=4, stride=1),
+                nn.BatchNorm2d(image_size * 8),
+                nn.ReLU(inplace=True))
+
+            self.layer2 = nn.Sequential(
+                nn.ConvTranspose2d(image_size * 8, image_size * 4,
+                                kernel_size=4, stride=2, padding=1),
+                nn.BatchNorm2d(image_size * 4),
+                nn.ReLU(inplace=True))
+
+            self.layer3 = nn.Sequential(
+                nn.ConvTranspose2d(image_size * 4, image_size * 2,
+                                kernel_size=4, stride=2, padding=1),
+                nn.BatchNorm2d(image_size * 2),
+                nn.ReLU(inplace=True))
+
+            self.layer4 = nn.Sequential(
+                nn.ConvTranspose2d(image_size * 2, image_size,
+                                kernel_size=4, stride=2, padding=1),
+                nn.BatchNorm2d(image_size),
+                nn.ReLU(inplace=True))
+
+            self.last = nn.Sequential(
+                nn.ConvTranspose2d(image_size, 1, kernel_size=4,
+                                stride=2, padding=1),
+                nn.Tanh())
         else:
-            raise Exception("Unknown generator type: {0}".format(kwargs["model_type"]))
+            raise Exception("Unknown discriminator type: {0}".format(kwargs["model_type"]))
 
     def forward(self, x):
-        x = F.relu(self.map1(x))
-        x = self.batchnorm1(x)
-        x = F.relu(self.map2(x))
-        x = F.relu(self.map3(x))
-        x = self.dropout(x)
-        return self.softmax(x)
+        if self.model_type == "linear":
+            x = F.relu(self.map1(x))
+            x = self.batchnorm1(x)
+            x = F.relu(self.map2(x))
+            x = F.relu(self.map3(x))
+            x = self.dropout(x)
+            return self.softmax(x)
+        elif self.model_type == "2dcnn":
+            out = self.layer1(x)
+            out = self.layer2(out)
+            out = self.layer3(out)
+            out = self.layer4(out)
+            out = self.last(out)
+        return out
 
 class PytorchAdversarialTrainer(nn.Module):
     """
