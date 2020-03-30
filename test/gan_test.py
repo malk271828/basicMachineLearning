@@ -33,12 +33,15 @@ def skDataset():
             if dataset == "cancer":
                 # 1d binary classification
                 data = load_breast_cancer()
+                max_feature_dim = 1
             elif dataset == "wine":
                 # 1d multiclass classification
                 data = load_wine()
+                max_feature_dim = 1
             elif dataset == "digits":
                 # 2d multiclass classification
                 data = load_digits()
+                max_feature_dim = 2
             else:
                 raise Exception("Unknown dataset name:{0}".format(dataset))
             self.X, self.y = data["data"], data["target"]
@@ -51,8 +54,8 @@ def skDataset():
 
             # reshape data
             self.y = np.expand_dims(self.y, 1)
-            if not isFlattened:
-                self.X = np.reshape(self.X, newshape=(len(self.X), 8, 8, 1))
+            if not isFlattened and max_feature_dim != 1:
+                self.X = np.reshape(self.X, newshape=(len(self.X), 1, 8, 8))
             self.feature_shape = self.X[0].shape
 
             print(Fore.CYAN + "\n--------------------------------------")
@@ -73,8 +76,8 @@ def skDataset():
             return self.X[idx], self.y[idx]
     return _skDataset
 
-@pytest.mark.parametrize("framework", ["keras", "pytorch"])
-@pytest.mark.parametrize("dataset_name", ["cancer", "wine"])
+@pytest.mark.parametrize("framework", ["pytorch"])
+@pytest.mark.parametrize("dataset_name", ["cancer"])
 def test_discriminator_1d(skDataset,
                           framework,
                           dataset_name):
@@ -145,7 +148,7 @@ def test_discriminator_1d(skDataset,
             if epoch % 10 == 0:
                 print("Epoch [{0}/{1}] Loss:{2:.4f} Acc:{3:.4f}".format(epoch, num_epochs, epoch_loss, epoch_acc))
 
-@pytest.mark.parametrize("framework", ["keras"])
+@pytest.mark.parametrize("framework", ["pytorch"])
 @pytest.mark.parametrize("dataset_name", ["digits"])
 def test_discriminator_2d(skDataset,
                           framework,
@@ -153,7 +156,10 @@ def test_discriminator_2d(skDataset,
     """2d dataset classification test
 
     Reference:
-        https://www.programcreek.com/python/example/104690/sklearn.datasets.load_breast_cancer
+        Basic sample for multi classification task on pytorch:
+        https://github.com/lschmiddey/PyTorch-Multiclass-Classification/blob/master/Softmax_Regression_Deep_Learning_Iris_Dataset.ipynb
+        set shape of each tensor for pytorch
+        https://discuss.pytorch.org/t/runtimeerror-given-groups-1-weight-64-3-3-3-so-expected-input-16-64-256-256-to-have-3-channels-but-got-64-channels-instead/12765
     """
     dataset = skDataset(dataset_name, isFlattened=False)
     batch_size = 100
@@ -194,8 +200,9 @@ def test_discriminator_2d(skDataset,
             drop_last=True
         )
         d.train()
-        torch.set_num_threads(4)
-        criterion = nn.BCELoss()
+        #torch.set_num_threads(4)
+        criterion = nn.CrossEntropyLoss()
+        #criterion = nn.NLLLoss()
         optimizer = optim.Adam(d.parameters(), 0.0005)
         for epoch in range(num_epochs):
             epoch_loss = 0
@@ -204,6 +211,8 @@ def test_discriminator_2d(skDataset,
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(True):
                     pred_y = d(X)
+                    print("pred_y", pred_y.shape)
+                    print("y", y.shape)
                     loss = criterion(pred_y, y)
                     loss.backward()
                     optimizer.step()

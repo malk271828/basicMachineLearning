@@ -541,45 +541,43 @@ class PytorchDiscriminator(nn.Module):
         if type(output_shape) == tuple:
             output_shape = output_shape[0]
 
+        # define common layers
+        self.softmax = nn.Softmax()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+
         if self.model_type == "linear":
             self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
             self.map3 = nn.Linear(kwargs["hidden_size"], 1)
             self.dropout = nn.Dropout(p=0.4)
             self.batchnorm1 = nn.BatchNorm1d(kwargs["hidden_size"])
-            self.softmax = nn.Softmax()
         elif self.model_type == "2dcnn":
             image_size = 8
             self.layer1 = nn.Sequential(
-                nn.ConvTranspose2d(hidden_size, image_size * 8,
-                                kernel_size=4, stride=1),
-                nn.BatchNorm2d(image_size * 8),
-                nn.ReLU(inplace=True))
+                # Conv2d(in_channels, out_channels, kernel_size)
+                nn.Conv2d(1, image_size, kernel_size=3,
+                        stride=1, padding=1),
+                nn.LeakyReLU(0.1, inplace=True))
 
             self.layer2 = nn.Sequential(
-                nn.ConvTranspose2d(image_size * 8, image_size * 4,
-                                kernel_size=4, stride=2, padding=1),
-                nn.BatchNorm2d(image_size * 4),
-                nn.ReLU(inplace=True))
+                nn.Conv2d(image_size, image_size*2, kernel_size=3,
+                        stride=1, padding=1),
+                nn.LeakyReLU(0.1, inplace=True))
 
             self.layer3 = nn.Sequential(
-                nn.ConvTranspose2d(image_size * 4, image_size * 2,
-                                kernel_size=4, stride=2, padding=1),
-                nn.BatchNorm2d(image_size * 2),
-                nn.ReLU(inplace=True))
+                nn.Conv2d(image_size*2, image_size*4, kernel_size=3,
+                        stride=1, padding=1),
+                nn.LeakyReLU(0.1, inplace=True))
 
             self.layer4 = nn.Sequential(
-                nn.ConvTranspose2d(image_size * 2, image_size,
-                                kernel_size=4, stride=2, padding=1),
-                nn.BatchNorm2d(image_size),
-                nn.ReLU(inplace=True))
+                nn.Conv2d(image_size*4, image_size*8, kernel_size=3,
+                        stride=1, padding=1),
+                nn.LeakyReLU(0.1, inplace=True))
 
-            self.last = nn.Sequential(
-                nn.ConvTranspose2d(image_size, 1, kernel_size=4,
-                                stride=2, padding=1),
-                nn.Tanh())
+            self.last = nn.Conv2d(image_size*8, 1, kernel_size=1, stride=1)
+            self.fc = nn.Linear(800*8, 1)
         else:
-            raise Exception("Unknown discriminator type: {0}".format(kwargs["model_type"]))
+            raise Exception("Unknown discriminator type: {0}".format(self.model_type))
 
     def forward(self, x):
         if self.model_type == "linear":
@@ -595,7 +593,10 @@ class PytorchDiscriminator(nn.Module):
             out = self.layer3(out)
             out = self.layer4(out)
             out = self.last(out)
-        return out
+            out = self.fc(out)
+            return self.softmax(out)
+        else:
+            raise Exception("Unknown discriminator type: {0}".format(self.model_type))
 
 class PytorchAdversarialTrainer(nn.Module):
     """

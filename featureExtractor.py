@@ -173,10 +173,15 @@ class batchExtractor(featureExtractor):
         return feature
 
     def _extractFeature(self,
+                        baseModality: str = "audio",
+                        num_word: int = 1,
                         verbose:int = 0,
                         **kwargs):
         """
         recipe: dictionary, required
+            file list to extract feature on each modality
+        baseModality: string, optional, default="audio"
+            base file length for aligning all the other modalities
         """
         # check arguments
         recipe = kwargs["recipe"]
@@ -208,36 +213,59 @@ class batchExtractor(featureExtractor):
             for modality in recipe.keys():
                 features[modality][fileIdx] = features[modality][fileIdx][:min_length]
 
-        feature_shape = dict()
         if self.sample_shift > 0:
-            num_total_sample = 0
+            feature_shape = dict()
+            num_total_sample = dict()
             for modality in features.keys():
                 for features_per_file in features[modality]:
+                    # store the shapes in each modalities
                     if modality not in feature_shape.keys():
                         feature_shape[modality] = features_per_file[0].shape
-                    num_total_sample += int( (len(features_per_file) - self.window_size) / self.sample_shift)
+
+                    # store the length in each modalities
+                    if modality not in num_total_sample.keys():
+                        num_total_sample[modality] = int( (len(features_per_file) - self.window_size) / self.sample_shift)
+                    else:
+                        num_total_sample[modality] += int( (len(features_per_file) - self.window_size) / self.sample_shift)
 
             print("feature_shape: {0}".format(feature_shape))
+            print("num_total_sample: {0}".format(num_total_sample))
+            base_num_sample = []
             for modality in features.keys():
                 if verbose > 0:
                     print("sampling... modality:{0}".format(modality))
 
-                if modality == "ref" or modality == "label" or modality == "text":
-                    samples = np.zeros((num_total_sample, ) + feature_shape[modality])
+                # create empty array for samples per one modality
+                if modality == "text":
+                    samples = np.zeros((num_total_sample[baseModality], ) + num_word * feature_shape[modality])
+                if modality == "ref" or modality == "label":
+                    samples = np.zeros((num_total_sample[modality], ) + feature_shape[modality])
                 else:
                     if isFlattened:
-                        samples = np.zeros((num_total_sample, self.window_size * np.prod(feature_shape[modality])))
+                        samples = np.zeros((num_total_sample[modality], self.window_size * np.prod(feature_shape[modality])))
                     else:
-                        samples = np.zeros((num_total_sample, self.window_size) + feature_shape[modality])
+                        samples = np.zeros((num_total_sample[modality], self.window_size) + feature_shape[modality])
 
-                total_current_pos = 0
                 file_shift = 0
                 for fileIdx, features_per_file in enumerate(features[modality]):
-                    num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
+                    if modality == "text":
+                        num_sample = base_num_sample[fileIdx]
+                        num_word_per_file = len(features_per_file)
+                    else:
+                        num_sample = int( (len(features_per_file) - self.window_size) / self.sample_shift)
+
+                    # store number of samples at each file on base modality
+                    if modality == baseModality:
+                        base_num_sample.append(num_sample)
 
                     for sampleIdx in range(num_sample):
-                        start = sampleIdx * self.sample_shift
-                        end = sampleIdx * self.sample_shift + self.window_size
+                        if modality == "text":
+                            start = int(sampleIdx / num_sample * num_word_per_file)
+                            end = int(sampleIdx / num_sample * num_word_per_file) + 1
+                        else:
+                            start = sampleIdx * self.sample_shift
+                            end = sampleIdx * self.sample_shift + self.window_size
+
                         if modality == "ref" or modality == "label":
                             mode_val, mode_num = stats.mode(features_per_file[start:end])
                             sample = mode_val
@@ -247,7 +275,7 @@ class batchExtractor(featureExtractor):
                             else:
                                 sample = np.array(features_per_file[start:end])
                         samples[file_shift + sampleIdx] = sample
-                    total_current_pos += len(features_per_file)
-                    file_shift = int((total_current_pos - self.window_size) / self.sample_shift)
+                    file_shift += num_sample
                 features[modality] = samples
+            print(base_num_sample)
         return features
