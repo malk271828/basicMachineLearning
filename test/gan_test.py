@@ -76,8 +76,8 @@ def skDataset():
             return self.X[idx], self.y[idx]
     return _skDataset
 
-@pytest.mark.parametrize("framework", ["pytorch"])
-@pytest.mark.parametrize("dataset_name", ["cancer"])
+@pytest.mark.parametrize("framework", ["keras", "pytorch"])
+@pytest.mark.parametrize("dataset_name", ["cancer", "wine"])
 def test_discriminator_1d(skDataset,
                           framework,
                           dataset_name):
@@ -148,7 +148,7 @@ def test_discriminator_1d(skDataset,
             if epoch % 10 == 0:
                 print("Epoch [{0}/{1}] Loss:{2:.4f} Acc:{3:.4f}".format(epoch, num_epochs, epoch_loss, epoch_acc))
 
-@pytest.mark.parametrize("framework", ["pytorch"])
+@pytest.mark.parametrize("framework", ["keras", "pytorch"])
 @pytest.mark.parametrize("dataset_name", ["digits"])
 def test_discriminator_2d(skDataset,
                           framework,

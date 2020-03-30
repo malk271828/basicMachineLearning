@@ -78,10 +78,10 @@ def test_landmarks(dataCorpus, modal):
     print(getShapeListArray(landmarks_list))
 
 @pytest.mark.landmark
-@pytest.mark.parametrize("useCache", [True])
-@pytest.mark.parametrize("isFlattened", [True])
-@pytest.mark.parametrize("isOnehot", [False])
-@pytest.mark.parametrize("sample_shift", [4])
+@pytest.mark.parametrize("useCache", [False, True])
+@pytest.mark.parametrize("isFlattened", [False, True])
+@pytest.mark.parametrize("isOnehot", [False, False])
+@pytest.mark.parametrize("sample_shift", [1, 4])
 def test_batch( dataCorpus,
                 useCache,
                 isFlattened,
