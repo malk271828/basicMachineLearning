@@ -238,7 +238,7 @@ class batchExtractor(featureExtractor):
                 # create empty array for samples per one modality
                 if modality == "text":
                     samples = np.zeros((num_total_sample[baseModality], ) + num_word * feature_shape[modality])
-                if modality == "ref" or modality == "label":
+                elif modality == "ref" or modality == "label":
                     samples = np.zeros((num_total_sample[modality], ) + feature_shape[modality])
                 else:
                     if isFlattened:
@@ -277,5 +277,4 @@ class batchExtractor(featureExtractor):
                         samples[file_shift + sampleIdx] = sample
                     file_shift += num_sample
                 features[modality] = samples
-            print(base_num_sample)
         return features
