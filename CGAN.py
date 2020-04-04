@@ -396,7 +396,7 @@ class CGANFactory(AbstractFactory):
         ----------
         To obtain a gan family product, invoke a createProductFamily() method
         with the argument specifying target backend system: ["keras"/"pytorch"]
-        E.generator.
+        e.g.
             generator, discriminator, trainer = ganfactory.createProductFamily("pytorch")
         """
         self.learningRate = learningRate
@@ -528,6 +528,12 @@ class PytorchGenerator(nn.Module):
         return x
 
 class PytorchDiscriminator(nn.Module):
+    """
+    Reference
+    ---------
+    How to calculate width and height of output
+    https://blog.shikoan.com/pytorch-convtranspose2d/
+    """
     def __init__(self, kwargs):
         super(PytorchDiscriminator, self).__init__()
 
@@ -541,41 +547,21 @@ class PytorchDiscriminator(nn.Module):
         if type(output_shape) == tuple:
             output_shape = output_shape[0]
 
-        # define common layers
-        self.softmax = nn.Softmax()
-        self.logsoftmax = nn.LogSoftmax(dim=1)
-
         if self.model_type == "linear":
             self.map1 = nn.Linear(input_shape, kwargs["hidden_size"])
             self.map2 = nn.Linear(kwargs["hidden_size"], kwargs["hidden_size"])
             self.map3 = nn.Linear(kwargs["hidden_size"], 1)
             self.dropout = nn.Dropout(p=0.4)
             self.batchnorm1 = nn.BatchNorm1d(kwargs["hidden_size"])
+            self.softmax = nn.Softmax()
         elif self.model_type == "2dcnn":
-            image_size = 8
-            self.layer1 = nn.Sequential(
-                # Conv2d(in_channels, out_channels, kernel_size)
-                nn.Conv2d(1, image_size, kernel_size=3,
-                        stride=1, padding=1),
-                nn.LeakyReLU(0.1, inplace=True))
-
-            self.layer2 = nn.Sequential(
-                nn.Conv2d(image_size, image_size*2, kernel_size=3,
-                        stride=1, padding=1),
-                nn.LeakyReLU(0.1, inplace=True))
-
-            self.layer3 = nn.Sequential(
-                nn.Conv2d(image_size*2, image_size*4, kernel_size=3,
-                        stride=1, padding=1),
-                nn.LeakyReLU(0.1, inplace=True))
-
-            self.layer4 = nn.Sequential(
-                nn.Conv2d(image_size*4, image_size*8, kernel_size=3,
-                        stride=1, padding=1),
-                nn.LeakyReLU(0.1, inplace=True))
-
-            self.last = nn.Conv2d(image_size*8, 1, kernel_size=1, stride=1)
-            self.fc = nn.Linear(800*8, 1)
+            self.conv_1 = torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
+            self.conv_2 = torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+            self.max_pool2d = torch.nn.MaxPool2d(kernel_size=2, stride=2)
+            self.linear_1 = torch.nn.Linear(256, 128)
+            self.linear_2 = torch.nn.Linear(128, 10)
+            self.dropout = torch.nn.Dropout(p=0.5)
+            self.relu = torch.nn.ReLU()
         else:
             raise Exception("Unknown discriminator type: {0}".format(self.model_type))
 
@@ -588,13 +574,18 @@ class PytorchDiscriminator(nn.Module):
             x = self.dropout(x)
             return self.softmax(x)
         elif self.model_type == "2dcnn":
-            out = self.layer1(x)
-            out = self.layer2(out)
-            out = self.layer3(out)
-            out = self.layer4(out)
-            out = self.last(out)
-            out = self.fc(out)
-            return self.softmax(out)
+            x = self.conv_1(x)
+            x = self.relu(x)
+            x = self.max_pool2d(x)
+            x = self.conv_2(x)
+            x = self.relu(x)
+            x = self.max_pool2d(x)
+            x = x.reshape(x.size(0), -1)
+            x = self.linear_1(x)
+            x = self.relu(x)
+            x = self.dropout(x)
+            pred = self.linear_2(x)
+            return pred
         else:
             raise Exception("Unknown discriminator type: {0}".format(self.model_type))
 

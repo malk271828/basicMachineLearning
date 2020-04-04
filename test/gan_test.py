@@ -14,6 +14,7 @@ init(autoreset=True)
 
 from sklearn.datasets import load_breast_cancer, load_wine, load_digits
 from sklearn.metrics import classification_report
+from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
 
 from CGAN import *
@@ -23,7 +24,10 @@ def skDataset():
     class _skDataset(torch.utils.data.Dataset):
         def __init__(self,
                      dataset:str,
-                     isFlattened=True):
+                     isFlattened=True,
+                     isOneHot=False,
+                     targetFormat=np.float,
+                     chLast=True):
             """
             Parameters
             ----------
@@ -47,23 +51,30 @@ def skDataset():
             self.X, self.y = data["data"], data["target"]
             self.num_class = len(data["target_names"])
             assert len(self.X) == len(self.y)
-
-            self.X = self.X.astype(np.float32)
-            self.y = self.y.astype(np.float32)
-            hist, bin = np.histogram(self.y, bins=[i for i in range(self.num_class + 1)])
+            sr = pd.Series(self.y)
 
             # reshape data
-            self.y = np.expand_dims(self.y, 1)
+            #self.y = np.expand_dims(self.y, 1)
             if not isFlattened and max_feature_dim != 1:
-                self.X = np.reshape(self.X, newshape=(len(self.X), 1, 8, 8))
+                if chLast:
+                    self.X = np.reshape(self.X, newshape=(len(self.X), 8, 8, 1))
+                else:
+                    self.X = np.reshape(self.X, newshape=(len(self.X), 1, 8, 8))
             self.feature_shape = self.X[0].shape
+            if isOneHot:
+                enc = OneHotEncoder(handle_unknown='ignore')
+                self.y = enc.fit_transform(self.y).toarray()
+
+            # data format
+            self.X = self.X.astype(np.float32)
+            self.y = self.y.astype(targetFormat)
 
             print(Fore.CYAN + "\n--------------------------------------")
             print("skDataset ({0}):".format(dataset))
             print("%d samples" % len(self.X))
             print("X shape: {0}".format(self.feature_shape))
             print("y shape: {0}".format(self.y[0].shape))
-            print("class histogram:{0}".format(hist))
+            print("class histogram: {0}".format(sr.value_counts(sort=False)))
             print(Fore.CYAN + "--------------------------------------")
             z = np.random.uniform(size=len(self.X))
         def getFeatureShape(self):
@@ -153,15 +164,20 @@ def test_discriminator_1d(skDataset,
 def test_discriminator_2d(skDataset,
                           framework,
                           dataset_name):
-    """2d dataset classification test
-
-    Reference:
+    """2d dataset classification test[
+        :
         Basic sample for multi classification task on pytorch:
-        https://github.com/lschmiddey/PyTorch-Multiclass-Classification/blob/master/Softmax_Regression_Deep_Learning_Iris_Dataset.ipynb
+        https://towardsdatascience.com/handwritten-digit-mnist-pytorch-977b5338e627
+        https://towardsdatascience.com/mnist-handwritten-digits-classification-using-a-convolutional-neural-network-cnn-af5fafbc35e9
+
         set shape of each tensor for pytorch
         https://discuss.pytorch.org/t/runtimeerror-given-groups-1-weight-64-3-3-3-so-expected-input-16-64-256-256-to-have-3-channels-but-got-64-channels-instead/12765
     """
-    dataset = skDataset(dataset_name, isFlattened=False)
+    dataset = skDataset(dataset_name,
+                        isFlattened=False,
+                        isOneHot=False,
+                        targetFormat=np.long,
+                        chLast=(framework=="keras"))
     batch_size = 100
     num_epochs = 300
 
@@ -200,33 +216,32 @@ def test_discriminator_2d(skDataset,
             drop_last=True
         )
         d.train()
-        #torch.set_num_threads(4)
+        torch.set_num_threads(4)
         criterion = nn.CrossEntropyLoss()
-        #criterion = nn.NLLLoss()
-        optimizer = optim.Adam(d.parameters(), 0.0005)
+        optimizer = optim.Adam(d.parameters(), 0.001)
         for epoch in range(num_epochs):
             epoch_loss = 0
             epoch_corrects = 0
             for X, y in train_loader:
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(True):
-                    pred_y = d(X)
-                    print("pred_y", pred_y.shape)
-                    print("y", y.shape)
-                    loss = criterion(pred_y, y)
+                    tensor_pred_y = d(X).view((batch_size, -1))
+                    loss = criterion(tensor_pred_y, y)
                     loss.backward()
                     optimizer.step()
                     epoch_loss += loss.item() * batch_size
-                    epoch_corrects += torch.sum(pred_y == y)
+                    for i, p in enumerate(tensor_pred_y):
+                        if y[i] == torch.max(p.data, 0)[1]:
+                            epoch_corrects = epoch_corrects + 1
 
-            epoch_acc = epoch_corrects.double() / len(dataset)
+            epoch_acc = epoch_corrects / len(dataset)
 
             if epoch % 10 == 0:
                 print("Epoch [{0}/{1}] Loss:{2:.4f} Acc:{3:.4f}".format(epoch, num_epochs, epoch_loss, epoch_acc))
 
 @pytest.mark.parametrize("framework", ["pytorch"])
 @pytest.mark.parametrize("dataset_name", ["cancer"])
-def test_adversarial_train_1d(skDataset,
+def test_adversarial_train_2d(skDataset,
                               framework,
                               dataset_name):
     dataset = skDataset(dataset_name)
@@ -242,8 +257,8 @@ def test_adversarial_train_1d(skDataset,
                              optimBetas=(0.9, 0.999), # unused
                              batchSize=batch_size,
                              timeSteps=20, # unused
-                             generator_type="linear",
-                             discriminator_type="linear")
+                             generator_type="2dcnn",
+                             discriminator_type="2dcnn")
 
     g, d, trainer = ganfactory.createProductFamily(framework)
     print(g)
