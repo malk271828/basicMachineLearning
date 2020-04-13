@@ -1,4 +1,4 @@
-import fileSelector
+from fileSelector import *
 
 class lombardFileSelector(fileSelector):
     def __init__(self,
